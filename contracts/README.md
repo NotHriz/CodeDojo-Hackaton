@@ -10,6 +10,8 @@ Authentication: [Supabase bearer verification](auth.md) implements `/api/auth/me
 
 Assistant: [chat contract](chat.md) describes the read-only tools, structured UI response, provider configuration, request limits, and explicit failure behavior.
 
+Community: [reporting/voting contract](community.md) specifies signed-in submissions, clearing observations, private reliability inputs, explicit-policy trust functions, and required atomic database behavior. Persistence and numeric-policy review remain pending.
+
 1. Endpoint method/path, authentication, parameters, and example success/error JSON.
 2. IDs, facility values, report statuses, nullability, and date formats.
 3. Data fields owned by the database and public fields exposed by the backend.

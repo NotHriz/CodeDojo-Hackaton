@@ -2,7 +2,7 @@
 
 Owner: the user (backend). Teammate 3 owns `app/models.py` and `app/database.py`; agree their interfaces before backend services depend on them. See [file ownership and handoffs](../COLLABORATION.md).
 
-The FastAPI foundation, building list/details API, Supabase asymmetric-token verification, and bounded DeepSeek chat orchestration are implemented. Database connections, contribution restrictions, and voting remain pending. `app/models.py` and `app/database.py` remain database-owned placeholders. Building/chat endpoints return an explicit 503 until required adapters/configuration are connected; tests alone use test records and mocked AI providers.
+The FastAPI foundation, building list/details API, Supabase token verification, bounded DeepSeek chat, signed-in report/clearing submissions, vote routes, and configurable trust functions are implemented. Database adapters and policy activation remain pending. `app/models.py` and `app/database.py` are database-owned placeholders. Disconnected features return explicit 503s; tests alone use in-memory adapters and mocked providers.
 
 ## Local development
 
@@ -34,11 +34,13 @@ Set-Location backend
 .venv/Scripts/python.exe -m pytest
 ```
 
-Tests cover foundation, building discovery, real signed-token verification, read-only chatbot tools, citations, provider failures, request limits, and explicit no-match/error behavior. All 81 tests pass. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading.
+All 110 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
 
 Authentication handoff: [contracts/auth.md](../contracts/auth.md). Set `SUPABASE_URL`, configure ES256/RS256 signing keys in Supabase, and send bearer tokens to `/api/auth/me`. Only the verified user UUID is returned. Legacy HS256 tokens are unsupported; immediate token revocation and live contribution restrictions are not implemented.
 
 Chat handoff: [contracts/chat.md](../contracts/chat.md). `POST /api/chat` uses DeepSeek only after `AI_API_KEY` and a building repository are available. No paid requests were made. Output contains structured places/sources/filters; failures return explicit errors. The in-memory demo limiter resets with the process and is not a spending hard cap.
+
+Community handoff: [contracts/community.md](../contracts/community.md). Report/vote mutations require authenticated identity. New reports/clearing observations require an `Idempotency-Key` UUID header. No trust policy is active by default: supply an explicitly reviewed `TrustPolicy` after the real community adapter is ready. Adapter methods must provide database-enforced uniqueness, restrictions, atomic status/history changes, and idempotency; in-memory tests do not prove real transaction behavior.
 
 ## API foundation contract
 
