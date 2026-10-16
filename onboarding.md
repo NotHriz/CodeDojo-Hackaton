@@ -17,7 +17,7 @@ Read [COLLABORATION.md](COLLABORATION.md) for file ownership, branches, PRs, and
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
 - Akses Campus is the working project name. IIUM Gombak and English-only initial UI are confirmed; exact collection boundaries remain to be chosen.
-- The backend foundation now runs: FastAPI app factory, `/api/health` process liveness, `/api/docs`, settings loading, CORS allowlist, and sanitized JSON errors. Runtime/test dependencies are pinned; 14 tests and a dependency check pass. No database connections, building endpoints, identity verification, community voting, or AI integration are implemented. Frontend and database-owned files remain placeholders.
+- The backend foundation and building search/details routes are implemented with 28 passing tests. Runtime/test dependencies are pinned. Building routes return 503 until a database adapter is provided; no runtime mock exists. No database connections, identity verification, community voting, or AI integration are implemented. Frontend and database-owned files remain placeholders. [Building contract v0.1](contracts/places.md) awaits teammate review.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
 - Hosting is agreed: Netlify Free frontend, Render Free Python backend, and Supabase PostgreSQL/Auth/Storage. Accounts, credentials, and deployments are not configured yet.
 - The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Exact schemas remain to be finalized.
@@ -352,7 +352,7 @@ Suggested 24-hour allocation:
 ## Next actions
 
 - Use the confirmed role split and IIUM Gombak pilot; finalize field-collection boundaries and experimental trust/transition rules.
-- Frontend owner: scaffold Vue. Backend foundation is runnable; next agree building list/details contracts and database-session integration with the affected teammates before implementing `/api/places`. Environment examples and backend setup commands exist.
+- Frontend owner: scaffold Vue and review [building contract v0.1](contracts/places.md). Database owner: provide the repository adapter over your models/sessions. Backend owner: wire that adapter into the implemented `/api/places` routes after the handoff. Environment examples and backend setup commands exist.
 - Configure a restricted Google Maps browser key and map ID; deploy an early map/list prototype.
 - Check the current IIUM accessibility map and reporting process.
 - Seek feedback from a wheelchair user or relevant campus representative through a team-authorized approach.

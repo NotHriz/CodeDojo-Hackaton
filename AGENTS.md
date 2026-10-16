@@ -26,7 +26,7 @@ Read any area to understand dependencies. When a fix needs another owner's files
 
 ## Contracts and verification
 
-- Follow `contracts/` when implemented contracts exist. Its current README is a checklist, not a finalized API specification.
+- Follow `contracts/` when implemented contracts exist. `contracts/places.md` describes the tested building API proposal and persistence handoff; teammate review and the real adapter remain pending. Other interfaces still need agreement.
 - Do not guess shared field names, enum values, identity/session interfaces, or community trust thresholds independently across layers.
 - Report cross-area dependencies and changed interfaces in the task/PR handoff. Keep tests within the relevant area unless a cross-area change is assigned.
 - Run checks appropriate to the change; report what actually ran. The backend foundation is runnable with pinned dependencies and tests; see `backend/README.md`. Frontend and database modules are still pending implementation.
