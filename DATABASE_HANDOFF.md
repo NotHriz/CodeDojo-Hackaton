@@ -6,9 +6,9 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
-Seven PostgreSQL migrations are merged through [PR #18](https://github.com/NotHriz/CodeDojo-Hackaton/pull/18). They provide thirteen backend-only tables. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
+Eight PostgreSQL migrations are merged through [PR #19](https://github.com/NotHriz/CodeDojo-Hackaton/pull/19). They provide fourteen backend-only tables. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
 
-The proposed `feat/database-contributor-state` change adds an eighth migration and fourteenth table for private contributor eligibility/weight. It awaits review and is not merged or deployed. Handoff PR #17 and audit-storage PR #18 are merged.
+The proposed `feat/database-community-read-views` change adds a ninth migration with three backend-only read views and no new tables. It awaits review and is not merged or deployed. Contributor-state PR #19 is merged.
 
 `backend/app/models.py` and `backend/app/database.py` remain placeholders. No real place/community repository is connected. Database credentials alone do not create an adapter. No trust policy or observation aggregation rule is activated, and no SQL trigger derives report status.
 
@@ -25,7 +25,8 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261016000500_clearance_observations.sql` | Clearing claims/evidence, scoped retry keys, chronology bound to actual parent time | Merged, PR #15 |
 | `20261016000600_clearance_votes.sql` | Unique member/clearing votes, actual parent/author membership, private snapshots | Merged, PR #16 |
 | `20261016000700_report_history.sql` | Application append-only audit events, public status/count and private vote snapshots | Merged, PR #18 |
-| `20261017000100_contributor_state.sql` | Private current eligibility, neutral/bounded weight, explicit restriction reason | Proposed on task branch; not merged |
+| `20261017000100_contributor_state.sql` | Private current eligibility, neutral/bounded weight, explicit restriction reason | Merged, PR #19 |
+| `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Proposed on task branch; not merged |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 
@@ -36,7 +37,7 @@ The alternate remote `feat/database-foundation` branch uses another places schem
 1. Agree SQLModel/PostgreSQL dependencies and their pinned manifests with the backend owner. User 3 owns models/session implementation; dependency manifests, service logic, composition wiring and API contracts require the backend owner's scoped handoff. Connections must not open at module import time.
 2. Implement models/session management and agree the adapter location/lifecycle. Own and close sessions per operation/request; return fully validated DTOs rather than expired/lazy ORM objects. Database failures must propagate, not become empty successful results or demo data.
 3. Implement the read-only [PlaceRepository](contracts/places.md). Map building identity to `place_id` where required, join campus identity, preserve unknown facilities and null observation dates, and order evidence by position. Agree how current facility summaries are maintained; do not invent a latest-observation rule. Join actual unresolved reports into active warnings and exclude resolved reports.
-4. Integrate contributor-state storage and implement transactional eligibility checks plus audit writes before enabling community writes. Agree explicit trust thresholds and policy-version assignment with the backend owner: `TrustPolicy` currently has no version field, while vote/history storage requires a private version/snapshot. Stored versions in tests are illustrative, not activated settings.
+4. Implement transactional contributor eligibility checks plus audit writes before enabling community writes. Agree explicit trust thresholds and policy-version assignment with the backend owner: `TrustPolicy` currently has no version field, while vote/history storage requires a private version/snapshot. Stored versions in tests are illustrative, not activated settings.
 5. Implement the [CommunityRepository](contracts/community.md) transaction requirements and verify real concurrency. Inject the real adapters and reviewed policy through `create_app(...)` only after their integration checks pass. Public response shapes remain backend-owned.
 
 ## Community transaction requirements
@@ -66,9 +67,19 @@ Application credentials may SELECT/INSERT/UPDATE state but cannot DELETE/TRUNCAT
 
 This slice stores current state only. It adds no restriction administration endpoint, restriction-change history, automatic reputation learning/penalties, expiry, or recovery policy. How trusted operators change state and record its history remains to be agreed. Existing report/clearing evidence and accepted vote snapshots are not rewritten when state changes.
 
+## Community read-view handoff
+
+The proposed ninth migration adds `building_active_warnings`, `report_community_counts` and `clearance_community_counts`. Only the service role receives SELECT. All three views use invoker security, retaining underlying table permissions/RLS rather than borrowing the view owner's privileges. They require PostgreSQL 15+; validation used PostgreSQL 18. Verify the actual shared-project version before deployment.
+
+The warning view exposes building/campus identity plus the existing warning fields for unverified, community-corroborated and disputed reports; resolved reports are excluded. Adapters must scope by requested building/campus and serialize the UUID report ID to the existing public string field. These queries do not drop a building that matches facility filters or overwrite its facility summaries.
+
+Counts include zero-vote reports/clearing observations, count each unique voter row once regardless of weight, and keep report votes separate from clearing votes. A stance replacement or stored status change is reflected on the next query without a materialized refresh. No trust policy, weighted quorum, aggregate status or new API shape is computed. Status consistency still requires the pending mutation adapter to commit vote/status/history changes together.
+
+View columns exclude author/voter IDs, weights, policy metadata, restriction state and retry secrets. This is backend query preparation, not direct browser access or completed API wiring. The ninth suite verifies approved columns, campus/warning scoping, zero/unweighted counts, separate targets, changed votes/statuses, service-role read-only grants, and browser denial even if SELECT on one view is accidentally granted without underlying table access.
+
 ## Verification and limits
 
-The most recent database execution tested the local working tree on `feat/database-contributor-state`: all eight PostgreSQL 18 SQL suites passed in a disposable loopback-only cluster. All eight migrations applied transactionally; test records were rolled back and the server stopped. Seven suites/migrations are merged; contributor-state storage is local work awaiting review.
+The most recent database execution tested the local working tree on `feat/database-community-read-views`: all nine PostgreSQL 18 SQL suites passed in a disposable loopback-only cluster. All nine migrations applied transactionally; test records were rolled back and the server stopped. Eight suites/migrations are merged; read views are local work awaiting review. The initial new-suite run had an incorrect expected error for a non-updatable join view; that assertion was corrected and explicit service-role write-grant checks added before the successful rerun.
 
 Run from the repository root on Windows with PostgreSQL 18 installed:
 
@@ -82,7 +93,7 @@ Coverage includes defaults, constraints, coordinate bounds, evidence ordering/li
 
 ## Remaining acceptance checks
 
-- Integrate contributor-state storage and implement eligibility checks/event writes through the real adapter. Agree restriction administration/history, recovery, freshness/reopening and trust-version rules before implementing unagreed behavior.
+- Implement eligibility checks/event writes through the real adapter and integrate read views after review. Agree restriction administration/history, recovery, freshness/reopening and trust-version rules before implementing unagreed behavior.
 - Connect real read/write adapters and verify competing/retried submissions produce one record/event, changed payload conflicts, and vote/status/history changes commit or roll back together.
 - Test public-field privacy and active warnings through places, reports and chat; confirm clearing support changes recalculate parent status without erasing earlier evidence.
 - Build a repeatable seed/import process using actual collected observations. Keep any fictional fixtures explicit and separate. Never turn fixtures into an outage fallback.

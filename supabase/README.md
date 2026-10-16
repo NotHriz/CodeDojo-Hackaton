@@ -27,7 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 # Optional: -PostgresBin 'C:\path\to\postgresql\bin' -Port 55440
 ```
 
-The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all eight SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
+The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all nine SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
 
 ## Evidence mapping for the backend adapter
 
@@ -97,6 +97,20 @@ The seventh SQL suite checks all four action shapes, historical snapshots, equal
 The backend service role may SELECT/INSERT/UPDATE state, but cannot DELETE/TRUNCATE it. Explicitly restore eligibility instead of deleting restrictions into the missing-row default. State updates must refresh `updated_at`; no timestamp trigger or automatic expiry is installed. Restriction administration, change history and recovery rules remain pending. No automatic score learning, consensus-based punishment, or rewriting of previously accepted votes occurs.
 
 Before enabling community writes, the adapter must recheck eligibility inside each mutation transaction under a coordinated lock, including races involving a previously missing contributor row. This schema is storage only; it does not authorize an operation or complete concurrent restriction enforcement. The eighth SQL suite checks neutral defaults, bounds, explicit disable/restore, denied application deletion and browser read/write denial.
+
+## Community read views
+
+`20261017000200_community_read_views.sql` adds three non-materialized, backend-only views with SELECT grants only:
+
+- `building_active_warnings`: `building_id`, `campus_id`, `report_id`, description/status/observation time for unverified, community-corroborated and disputed reports. Resolved reports are excluded; adapters must still scope by requested building/campus.
+- `report_community_counts`: one row per report with its ID and supporter/dispute counts, including zero-vote reports.
+- `clearance_community_counts`: one row per clearing observation with its ID, parent report ID and separate supporter/dispute counts, including zero-vote observations.
+
+Counts are unique member rows, not summed weights or consensus thresholds. Underlying vote/status changes are visible on the next query; the views do not change status or facility summaries. API adapters still need coordinated transactions to avoid inconsistent status/count snapshots.
+
+Views use `security_invoker=true` (PostgreSQL 15+) so underlying table permissions/RLS apply. Browser roles have no view grants, and no private author, voter, weight, policy, retry or restriction fields appear in their column sets. Validate the deployed server version before applying; local checks used PostgreSQL 18. This does not expose a new browser API or connect a repository.
+
+The ninth SQL suite checks active-state/campus scoping, separate zero/unweighted counts, changed stances and resolved warnings, approved columns, service-role read-only grants, and invoker-security denial even with an accidental view-only browser grant. Its initial join-view update assertion expected the permission error too early; the corrected test checks PostgreSQL's non-updatable-view error plus the actual grant set.
 
 ## Pending handoff
 
