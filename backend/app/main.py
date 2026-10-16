@@ -9,10 +9,12 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from app.config import Settings
+from app.routers.auth import router as auth_router
 from app.routers.health import router as health_router
 from app.routers.places import router as places_router
 from app.schemas import ErrorResponse
 from app.services.places import PlaceRepository
+from app.services.auth import SupabaseTokenVerifier, TokenVerifier
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ def create_app(
     settings: Settings | None = None,
     *,
     place_repository: PlaceRepository | None = None,
+    token_verifier: TokenVerifier | None = None,
 ) -> FastAPI:
     """Build the API without opening database connections or contacting providers."""
     settings = settings if settings is not None else Settings()
@@ -40,10 +43,13 @@ def create_app(
     )
     api.state.settings = settings
     api.state.place_repository = place_repository
+    api.state.token_verifier = token_verifier if token_verifier is not None else (
+        SupabaseTokenVerifier(settings.supabase_url) if settings.supabase_url else None
+    )
 
     @api.exception_handler(HTTPException)
     async def handle_http_error(request: Request, exc: HTTPException):
-        code = {404: "not_found", 405: "method_not_allowed", 503: "service_unavailable"}.get(
+        code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed", 503: "service_unavailable"}.get(
             exc.status_code, "request_failed"
         )
         message = exc.detail if isinstance(exc.detail, str) else "Request failed."
@@ -75,6 +81,7 @@ def create_app(
     )
     api.include_router(health_router, prefix="/api")
     api.include_router(places_router, prefix="/api")
+    api.include_router(auth_router, prefix="/api")
     return api
 
 
