@@ -2,7 +2,7 @@
 
 Owner: the user (backend). Teammate 3 owns `app/models.py` and `app/database.py`; agree their interfaces before backend services depend on them. See [file ownership and handoffs](../COLLABORATION.md).
 
-The FastAPI foundation, building list/details API, and Supabase asymmetric-token verification are implemented. Database connections, contribution restrictions, voting, and AI are not implemented yet. `app/models.py` and `app/database.py` remain database-owned placeholders. Building endpoints return an explicit 503 until the database teammate supplies the repository adapter; tests alone use test records.
+The FastAPI foundation, building list/details API, Supabase asymmetric-token verification, and bounded DeepSeek chat orchestration are implemented. Database connections, contribution restrictions, and voting remain pending. `app/models.py` and `app/database.py` remain database-owned placeholders. Building/chat endpoints return an explicit 503 until required adapters/configuration are connected; tests alone use test records and mocked AI providers.
 
 ## Local development
 
@@ -34,9 +34,11 @@ Set-Location backend
 .venv/Scripts/python.exe -m pytest
 ```
 
-Tests cover liveness, configuration, HTTP errors, sanitization, CORS, building filters, campus isolation, pagination, evidence/warnings, genuine misses, disconnected/broken repositories, and real signed-token verification. All 52 tests pass. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading.
+Tests cover foundation, building discovery, real signed-token verification, read-only chatbot tools, citations, provider failures, request limits, and explicit no-match/error behavior. All 81 tests pass. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading.
 
 Authentication handoff: [contracts/auth.md](../contracts/auth.md). Set `SUPABASE_URL`, configure ES256/RS256 signing keys in Supabase, and send bearer tokens to `/api/auth/me`. Only the verified user UUID is returned. Legacy HS256 tokens are unsupported; immediate token revocation and live contribution restrictions are not implemented.
+
+Chat handoff: [contracts/chat.md](../contracts/chat.md). `POST /api/chat` uses DeepSeek only after `AI_API_KEY` and a building repository are available. No paid requests were made. Output contains structured places/sources/filters; failures return explicit errors. The in-memory demo limiter resets with the process and is not a spending hard cap.
 
 ## API foundation contract
 

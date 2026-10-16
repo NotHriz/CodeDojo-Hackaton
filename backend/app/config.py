@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     supabase_service_role_key: SecretStr = SecretStr("")
     ai_api_key: SecretStr = SecretStr("")
     ai_model: str = "deepseek-flash"
+    ai_timeout_seconds: float = Field(default=15, ge=1, le=30)
+    ai_max_output_tokens: int = Field(default=600, ge=100, le=1200)
+    chat_requests_per_minute: int = Field(default=5, ge=1, le=60)
+    chat_requests_per_day: int = Field(default=100, ge=1, le=1000)
 
     @field_validator("supabase_url")
     @classmethod

@@ -8,6 +8,8 @@ Agree the first building list/details slice before three teammates implement inc
 
 Authentication: [Supabase bearer verification](auth.md) implements `/api/auth/me` and documents frontend sign-in and signing-key requirements.
 
+Assistant: [chat contract](chat.md) describes the read-only tools, structured UI response, provider configuration, request limits, and explicit failure behavior.
+
 1. Endpoint method/path, authentication, parameters, and example success/error JSON.
 2. IDs, facility values, report statuses, nullability, and date formats.
 3. Data fields owned by the database and public fields exposed by the backend.
