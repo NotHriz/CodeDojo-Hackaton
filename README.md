@@ -12,6 +12,8 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
+Read [COLLABORATION.md](COLLABORATION.md) before editing: teammate 1 owns `frontend/`; the user owns backend/API and integration; teammate 3 owns `supabase/`, `seed/`, and backend database/model modules. Use task branches and small PRs. [AGENTS.md](AGENTS.md) applies the same ownership boundaries to coding agents. Shared interface decisions belong in [contracts/](contracts/README.md).
+
 ## Planned MVP
 
 - Explore approximately 10–15 campus buildings using a Google map or accessible list, with specific entrance details inside each building record.
@@ -112,7 +114,13 @@ backend/
     routers/__init__.py
     services/__init__.py
 seed/README.md
+supabase/
+  README.md
+  migrations/
+contracts/README.md
 .gitignore
+AGENTS.md
+COLLABORATION.md
 README.md
 onboarding.md
 ```

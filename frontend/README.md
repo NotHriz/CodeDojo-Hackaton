@@ -2,6 +2,8 @@
 
 Owner: teammate 1.
 
+Use a frontend task branch and edit `frontend/` only unless given a scoped handoff. Agree API examples with the backend owner through `contracts/` before building API-dependent screens. See [collaboration rules](../COLLABORATION.md).
+
 This is a directory skeleton for the planned Vue 3, Vite, JavaScript, Vue Router, and Tailwind application. Dependencies, entry points, and build configuration have not been scaffolded yet; no npm commands are available.
 
 | Directory | Responsibility |

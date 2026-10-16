@@ -10,6 +10,8 @@ Akses Campus is the current working direction for a three-person, 24-hour commun
 
 Read this file before planning or implementing features. It records the discussion so teammates and future agents can continue without reconstructing the chat. The user's latest instructions and any applicable `AGENTS.md` take precedence.
 
+Read [COLLABORATION.md](COLLABORATION.md) for file ownership, branches, PRs, and cross-area handoffs. Root [AGENTS.md](AGENTS.md) provides matching agent instructions. Shared contracts belong in `contracts/`; database migrations/configuration belong in `supabase/`.
+
 ## Current status and decisions
 
 - The team has three members and a 24-hour build window.
@@ -86,7 +88,11 @@ backend/
     routers/          # Places, reports, votes, authenticated identity, chat
     services/         # Vote aggregation, trust rules, report transitions, AI tools
 seed/README.md
+supabase/            # Database-owned; migrations directory is currently empty
+contracts/           # Shared interface decisions; backend owner is single editor
 .gitignore
+AGENTS.md
+COLLABORATION.md
 README.md
 onboarding.md
 ```
@@ -305,6 +311,8 @@ This is a proposed project angle to validate, not a proven market gap. Avoid cla
 ## Suggested responsibilities and schedule
 
 Assign actual names once the team agrees. Balance tasks against the team's strengths.
+
+File ownership is specified in [COLLABORATION.md](COLLABORATION.md#ownership). Teammate 3 owns `backend/app/models.py` and `backend/app/database.py` as exceptions to backend directory ownership. The user is the integration owner and shared-contract editor. These are coordination rules, not technical file locks.
 
 | Owner | Main responsibility |
 | --- | --- |

@@ -1,6 +1,6 @@
 # Backend
 
-Owner: the user (backend), collaborating with teammate 3 (database).
+Owner: the user (backend). Teammate 3 owns `app/models.py` and `app/database.py`; agree their interfaces before backend services depend on them. See [file ownership and handoffs](../COLLABORATION.md).
 
 This is a Python package skeleton for the planned FastAPI, Pydantic, and SQLModel backend. There is no ASGI application, dependency manifest, database connection, or runnable server yet.
 
