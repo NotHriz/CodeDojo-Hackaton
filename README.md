@@ -8,7 +8,7 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-**Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. All 135 backend tests pass. Real database adapters, trust-policy activation, provider setup, frontend, and deployment remain pending; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).
+**Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. All 142 backend tests pass. Real database adapters, trust-policy activation, provider setup, frontend, and deployment remain pending; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
@@ -183,7 +183,7 @@ Custom markers, panning, and zooming do not add map loads; recreating the map do
 - Avoid collecting disability histories or requiring precise live location.
 - Send only necessary context to the AI provider, avoid logging sensitive chat content, and ground answers in database evidence.
 
-The backend has 135 passing tests using generated signing keys, explicit test repositories, and mocked providers; dependency checks pass. Real database/provider integration, database concurrency, and complete product workflows have not been tested. Add frontend build, seed, and deployment commands as they become available.
+The backend has 142 passing tests using generated signing keys, explicit test repositories, and mocked providers; dependency checks pass. Real database/provider integration, database concurrency, and complete product workflows have not been tested. Add frontend build, seed, and deployment commands as they become available.
 
 For outages, show accurate component-specific errors, retain unsent form input, and never show failed submissions as successful. A local setup and clearly identified recorded demo are presentation backups; cached records, if used, must display their age. The user reports no submission artifact is required.
 

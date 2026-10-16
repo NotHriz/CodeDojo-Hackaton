@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
-from app.schemas import PlaceDetail
+from app.schemas import FacilityValue, PlaceDetail
 from app.services.chat import (
     AIUnavailable, ChatBudget, ChatRequest, DeepSeekProvider, InvalidAIResponse, run_chat,
 )
@@ -273,3 +273,80 @@ def test_unexpected_provider_json_shapes_return_502_not_500(payload):
         response = client.post("/api/chat", json={"message": "Find a building"})
         assert response.status_code == 502
         assert response.json()["error"]["code"] == "upstream_error"
+
+@pytest.mark.parametrize("details_first", [False, True])
+@pytest.mark.parametrize("detail_count", [1, 2])
+def test_search_reserves_evidence_capacity_for_extra_details(details_first, detail_count):
+    base = Repository().record
+    records = [base.model_copy(update={"id": f"study-{i}", "name": f"Study {i}"}) for i in range(5)]
+    extras = [base.model_copy(update={"id": f"extra-{i}", "category": "other"}) for i in range(detail_count)]
+
+    class ExpandedRepository:
+        def list_places(self, campus_id):
+            return records + extras
+
+        def get_place(self, place_id):
+            return next((record for record in records + extras if record.id == place_id), None)
+
+    search = tool(category="study")["tool_calls"][0]
+    details = []
+    for i, record in enumerate(extras):
+        call = tool("get_place_details", place_id=record.id)["tool_calls"][0]
+        call["id"] = f"detail-{i}"
+        details.append(call)
+    calls = details + [search] if details_first else [search] + details
+    provider = Provider({"tool_calls": calls}, answer(cited_place_ids=["study-0"] + [r.id for r in extras]))
+    with TestClient(create_app(chat_provider=provider, place_repository=ExpandedRepository())) as client:
+        response = client.post("/api/chat", json={"message": "Find study buildings and compare another building"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_matches"] == 5
+    assert len(body["places"]) == 5 - detail_count
+    assert all(place["category"] == "study" for place in body["places"])
+    assert {r.id for r in extras} <= {source["id"] for source in body["sources"]}
+
+
+@pytest.mark.parametrize("change", ["facility", "missing"])
+def test_no_surviving_search_matches_returns_retry_without_stale_count(change):
+    class ChangingRepository(Repository):
+        def get_place(self, place_id):
+            if change == "missing":
+                return None
+            updated = self.record.model_copy(deep=True)
+            updated.facilities.step_free_entrance = FacilityValue.NO
+            return updated
+
+    provider = Provider(tool(step_free_entrance=True))
+    with TestClient(create_app(chat_provider=provider, place_repository=ChangingRepository())) as client:
+        response = client.post("/api/chat", json={"message": "Find step-free buildings"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "no_matches"
+    assert body["places"] == []
+    assert body["total_matches"] is None
+    assert "changed" in body["answer"].lower()
+    assert len(provider.requests) == 1
+
+def test_partial_revalidation_keeps_valid_matches_without_stale_total():
+    base = Repository().record
+    second = base.model_copy(update={"id": "second-study", "name": "Second study"})
+
+    class ChangingRepository:
+        def list_places(self, campus_id):
+            return [base, second]
+
+        def get_place(self, place_id):
+            if place_id == base.id:
+                return base
+            updated = second.model_copy(deep=True)
+            updated.facilities.step_free_entrance = FacilityValue.NO
+            return updated
+
+    provider = Provider(tool(step_free_entrance=True), answer())
+    with TestClient(create_app(chat_provider=provider, place_repository=ChangingRepository())) as client:
+        response = client.post("/api/chat", json={"message": "Find step-free buildings"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "answered"
+    assert [place["id"] for place in body["places"]] == [base.id]
+    assert body["total_matches"] is None

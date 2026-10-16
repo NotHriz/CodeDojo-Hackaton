@@ -1,11 +1,11 @@
-﻿# Backend integration handoff
+# Backend integration handoff
 
 Backend/API and integration documentation are implemented. Frontend, Supabase migrations, seed data, `backend/app/models.py`, and `backend/app/database.py` remain with their owners.
 
 ## Current verification
 
 - Earlier authentication, chat, community, explicit local demo, and CI PRs have merged. There is no remaining stacked merge queue.
-- 135 backend tests pass locally; dependency checks pass. One existing Starlette test-client HTTPX deprecation warning remains.
+- 142 backend tests pass locally; dependency checks pass. One existing Starlette test-client HTTPX deprecation warning remains.
 - Tests use generated EC/RSA signatures, mocked providers, and test repositories. No paid DeepSeek calls, real Supabase access, deployment, or frontend integration occurred during this verification.
 - Review regressions cover mixed search/detail calls, maximum-length answer/history round trips, malformed provider JSON, and report/clearance history transitions.
 - The community test adapter now preserves resolved reports after original-report votes and recomputes status when clearing support changes. This does not demonstrate SQL concurrency or transactional correctness.

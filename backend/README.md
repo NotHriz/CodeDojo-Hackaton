@@ -38,7 +38,7 @@ Set-Location backend
 
 To generate the same report locally from `backend`, run `.venv/Scripts/python.exe -m pytest -q --junitxml=test-results.xml`. The report is ignored by Git. Workflow definition: [backend.yml](../.github/workflows/backend.yml).
 
-All 135 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
+All 142 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
 
 Authentication handoff: [contracts/auth.md](../contracts/auth.md). Set `SUPABASE_URL`, configure ES256/RS256 signing keys in Supabase, and send bearer tokens to `/api/auth/me`. Only the verified user UUID is returned. Legacy HS256 tokens are unsupported; immediate token revocation and live contribution restrictions are not implemented.
 

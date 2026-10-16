@@ -266,6 +266,9 @@ def run_chat(request: ChatRequest, provider: ChatProvider, repository: PlaceRepo
             raise InvalidAIResponse() from exc
     if sum(name == "search_places" for _, name, _ in validated) > 1:
         raise InvalidAIResponse()
+    # Reserve space before execution so tool order cannot exhaust the evidence cap.
+    detail_ids = {args.place_id for _, name, args in validated if name == "get_place_details"}
+    search_limit = 5 - len(detail_ids)
 
     messages.append({"role": "assistant", "content": None, "tool_calls": calls})
     records: dict[str, PlaceDetail] = {}
@@ -276,7 +279,7 @@ def run_chat(request: ChatRequest, provider: ChatProvider, repository: PlaceRepo
         if name == "search_places":
             filters = args
             result = search_places(
-                repository, campus_id="iium-gombak", **args.model_dump(), limit=5, offset=0
+                repository, campus_id="iium-gombak", **args.model_dump(), limit=search_limit, offset=0
             )
             total = result.total
             search_match_ids = [item.id for item in result.items]
@@ -302,11 +305,6 @@ def run_chat(request: ChatRequest, provider: ChatProvider, repository: PlaceRepo
             answer="No recorded building matches all your requirements. Which requirement, if any, would you like to change?",
             status="no_matches", applied_filters=filters, total_matches=0,
         )
-    if not records:
-        return ChatResponse(
-            answer="No matching building record is available. Please select a building from the map or list.",
-            status="no_matches", applied_filters=filters, total_matches=total,
-        )
     # Extra detail lookups are evidence, not additions to the search page.
     # Recheck hydrated records in case the adapter's data changed after its list read.
     matching_records = list(records.values()) if filters is None else [
@@ -315,6 +313,18 @@ def run_chat(request: ChatRequest, provider: ChatProvider, repository: PlaceRepo
             records[place_id], campus_id="iium-gombak", **filters.model_dump()
         )
     ]
+    if filters is not None and len(matching_records) != len(search_match_ids):
+        # A full recount is unavailable through separate list/detail reads.
+        total = None
+    if not matching_records:
+        return ChatResponse(
+            answer=(
+                "Building records changed while checking your search. Please retry to refresh the matches."
+                if filters is not None else
+                "No matching building record is available. Please select a building from the map or list."
+            ),
+            status="no_matches", applied_filters=filters, total_matches=total,
+        )
     evidence = [record.model_dump(mode="json") for record in records.values()]
     encoded = json.dumps(evidence)
     if len(encoded) > 24000:
