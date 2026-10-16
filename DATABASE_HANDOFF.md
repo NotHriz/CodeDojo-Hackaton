@@ -8,7 +8,7 @@ This is the database owner's maintained status and integration checklist. Update
 
 Nine PostgreSQL migrations are merged through [PR #20](https://github.com/NotHriz/CodeDojo-Hackaton/pull/20). They provide fourteen backend-only tables and three backend-only views. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
 
-The proposed `feat/database-seed-import` change adds an offline collection validator, transactional insert-only SQL generator, and unit/CLI/PostgreSQL import checks. It awaits review and is not merged or deployed; no new schema migration or shared import is included. Read-view PR #20 is merged.
+Seed preparation PR #21 is merged. The proposed `feat/database-place-records` change adds a tenth migration and fourth backend-only view for complete place-detail JSON records, plus SQL/backend-schema integration checks. It awaits review and is not merged, deployed, or connected to a runtime repository.
 
 `backend/app/models.py` and `backend/app/database.py` remain placeholders. No real place/community repository is connected. Database credentials alone do not create an adapter. No trust policy or observation aggregation rule is activated, and no SQL trigger derives report status.
 
@@ -27,6 +27,7 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261016000700_report_history.sql` | Application append-only audit events, public status/count and private vote snapshots | Merged, PR #18 |
 | `20261017000100_contributor_state.sql` | Private current eligibility, neutral/bounded weight, explicit restriction reason | Merged, PR #19 |
 | `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Merged, PR #20 |
+| `20261017000300_place_detail_records.sql` | Complete public place-detail record projection | Proposed on task branch; not merged |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 
@@ -79,7 +80,7 @@ View columns exclude author/voter IDs, weights, policy metadata, restriction sta
 
 ## Seed preparation handoff
 
-The local `seed/import_places.py` validates collection JSON against backend field constraints and generates an explicit insert-only SQL transaction. The default CLI validates only; `--sql` prints a plan without connecting to a database. No new dependency, backend manifest change, SQLModel replacement, API shape, or schema migration is introduced.
+The merged `seed/import_places.py` validates collection JSON against backend field constraints and generates an explicit insert-only SQL transaction. The default CLI validates only; `--sql` prints a plan without connecting to a database. No new dependency, backend manifest change, SQLModel replacement, API shape, or schema migration is introduced.
 
 See [seed/README.md](seed/README.md) for input format, stable identity requirements and commands. The self-contained batch lists campuses/buildings plus optional entrances/observations and ordered references. Unknown/private/demo fields, duplicate IDs/JSON keys, invalid references/values, non-timezone dates, nonfinite JSON and NUL are rejected. Unknown facilities and missing entrance coordinates/dates stay unknown/null; no actual campus observations are invented.
 
@@ -87,9 +88,19 @@ Generated imports accept identical records, insert missing records, and roll bac
 
 The combined disposable runner tests repeat imports, literal quotes/backslashes/dollar delimiters/Unicode, null/unknown defaults, retained community reports, and whole-batch rollback including evidence conflicts. Tests contain fictional fixtures only. Import preparation is not a runtime demo/outage fallback and does not connect the live repositories.
 
+## Complete place-record handoff
+
+The proposed `place_detail_records` invoker view exposes only `id`, `campus_id` and `record`. Query by campus/building identity; validate `record` with the existing backend `PlaceDetail`. JSON includes facilities, entrances, observations, ordered evidence and unresolved warnings without private identities/weights, ingestion times, retry keys, or internal entrance/observation IDs. No field is added to the shared API contract.
+
+Each child collection is independently aggregated to prevent join multiplication. Entrances sort by internal UUID; observations by ingestion time then UUID; each reference list by its explicit position; warnings by observed time descending then report UUID. These are deterministic display orderings, not a facility aggregation policy. Empty collections remain arrays; missing entrance coordinates, source/notes and observation dates remain null. Building summaries stay as recorded even if observations differ. Resolved warnings are excluded without dropping the building.
+
+Persisted records project `is_demo=false`; fictional fixtures exist only inside disposable verification and are never a runtime demo adapter. The existing explicit development demo remains separate and unchanged. SQL stores reference URLs; backend DTO validation and public/scoped reference permissions still apply. Access is service-role SELECT only, with invoker permissions/RLS retained through underlying tables/views (PostgreSQL 15+).
+
+The new verification script reads generated records from disposable PostgreSQL under service-role grants, validates exact public/nested field sets and real DTOs, and passes those records through backend search/filter/pagination logic. Its small repository bridge is test-only: it does not implement production sessions, database failure handling, request injection or the live PlaceRepository. Those still require the agreed SQLModel/PostgreSQL dependency and composition handoff. Read the small pilot dataset per the existing protocol; do not infer unknown facilities or automatically fall back to fixtures.
+
 ## Verification and limits
 
-The most recent execution tested the local working tree on `feat/database-seed-import`: all nine PostgreSQL 18 SQL suites, ten seed unit/CLI tests, and generated-import PostgreSQL checks passed. All nine merged migrations applied transactionally. SQL-suite fixtures rolled back; seed fixtures were committed only inside the disposable loopback cluster, and its server stopped afterward. No shared data was touched. The combined runner now also requires the existing backend Python environment.
+The most recent execution tested the local working tree on `feat/database-place-records`: all ten PostgreSQL 18 SQL suites, ten seed unit/CLI tests, generated-import checks, and the PostgreSQL-to-backend place-record checks passed. All ten migrations applied transactionally. SQL-suite fixtures rolled back; seed fixtures were committed only inside the disposable loopback cluster, and its server stopped afterward. Nine migrations are merged; the tenth is local work awaiting review. No shared data was touched. The combined runner requires the existing backend Python environment.
 
 Run from the repository root on Windows with PostgreSQL 18 installed:
 
@@ -99,14 +110,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 
 Optional runner arguments are `-PostgresBin 'C:\path\to\postgresql\bin'` and `-Port 55440`. Minimal role fixtures exist only for the disposable cluster; never run `supabase/tests/roles.sql` against Supabase. Temporary cluster files are retained for diagnosis.
 
-Coverage includes defaults, constraints, coordinate bounds, evidence ordering/limits, foreign keys and protected deletion, scoped retry uniqueness, clearing chronology, self-vote rejection, policy/weight bounds, vote replacement, RLS and browser-role denial. Audit checks cover all four actions, equal-time ordering, independent snapshots, application append-only access, unique creation events, wrong-parent rejection, and event rollback after a failed mutation in the same SQL subtransaction. Contributor checks cover neutral defaults, required restriction reasons, explicit restoration, bounded/nonfinite weights, application deletion denial, RLS and private-field read/write denial. This is not proof of a complete retry adapter, simultaneous transaction correctness, real Supabase Auth/Storage configuration, deployed persistence across restarts, or the fairness of seeded consensus. No paid AI calls or shared database writes occurred. Backend/frontend suites were not rerun; their code/interfaces are unchanged.
+Coverage includes defaults, constraints, coordinate bounds, evidence ordering/limits, foreign keys and protected deletion, scoped retry uniqueness, clearing chronology, self-vote rejection, policy/weight bounds, vote replacement, RLS and browser-role denial. Audit checks cover all four actions, equal-time ordering, independent snapshots, application append-only access, unique creation events, wrong-parent rejection, and event rollback after a failed mutation in the same SQL subtransaction. Contributor checks cover neutral defaults, required restriction reasons, explicit restoration, bounded/nonfinite weights, application deletion denial, RLS and private-field read/write denial. Place-record checks additionally cover independent child aggregation, evidence ordering, empty/null fields, resolved-warning exclusion, DTO privacy, campus defense, unknown-filter exclusion and pagination through actual backend search logic. This is not proof of a complete retry adapter, simultaneous transaction correctness, real Supabase Auth/Storage configuration, deployed persistence across restarts, or the fairness of seeded consensus. No paid AI calls or shared database writes occurred. Backend/frontend suites were not rerun; their code/interfaces are unchanged.
 
 ## Remaining acceptance checks
 
 - Implement eligibility checks/event writes and the accepted read views through the real adapter. Agree restriction administration/history, recovery, freshness/reopening and trust-version rules before implementing unagreed behavior.
 - Connect real read/write adapters and verify competing/retried submissions produce one record/event, changed payload conflicts, and vote/status/history changes commit or roll back together.
 - Test public-field privacy and active warnings through places, reports and chat; confirm clearing support changes recalculate parent status without erasing earlier evidence.
-- Review/integrate seed preparation tooling and obtain actual collected observations. Review and apply generated SQL as a separate database-owner task. Keep fictional tests separate; never turn them into an outage fallback.
+- Obtain actual collected observations for the merged seed preparation tooling. Review and apply generated SQL as a separate database-owner task. Keep fictional tests separate; never turn them into an outage fallback.
 - Configure and verify Supabase access/Storage policies, migration history, shared deployment and persistence across backend restarts. No shared reset or deployment is authorized by this handoff.
 
 See [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) for backend readiness and [COLLABORATION.md](COLLABORATION.md) for ownership and PR coordination.
