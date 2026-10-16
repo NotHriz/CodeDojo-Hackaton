@@ -1,0 +1,33 @@
+/* THEME + SHARED STYLES. Change a colour here and the whole site follows. */
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --color-ink: #14213d;    /* text and borders */
+  --color-paper: #f4f6fa;  /* page background */
+  --color-brand: #0b5394;  /* header and buttons */
+  --color-yes: #14632f;    /* "Yes" status (always shown with an icon + word) */
+  --color-no: #9b1c1c;     /* "No" status */
+  --color-unknown: #475569;
+}
+
+/* COLOUR-BLIND MODE: swaps green/red for blue/orange. Set by useA11y.js via data-cb. */
+:root[data-cb="on"] { --color-yes: #00508f; --color-no: #b34700; }
+
+body { @apply bg-paper font-sans text-ink; }
+
+/* Keyboard focus ring. Removing it makes keyboard use impossible. */
+:focus-visible { outline: 3px solid #0b5394; outline-offset: 3px; }
+
+/* Reusable pieces. Edit once, every page changes. */
+@layer components {
+  .btn { @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 font-bold text-white disabled:opacity-60; }
+  .btn-alt { @apply inline-flex min-h-11 items-center justify-center rounded-lg border-2 border-brand px-4 font-bold text-brand; }
+  .input { @apply mt-1 min-h-12 w-full rounded-lg border-2 border-ink bg-white px-3; }
+  .card { @apply rounded-lg border-2 border-ink bg-white p-4; }
+}
+
+/* Respect the OS "reduce motion" setting */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
