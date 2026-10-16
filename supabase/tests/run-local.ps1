@@ -21,7 +21,7 @@ try {
     foreach ($migration in (Get-ChildItem (Join-Path $PSScriptRoot '../migrations/*.sql') | Sort-Object Name)) {
         Invoke-PostgresTool 'psql' ($connectionArgs + @('--single-transaction', '-f', $migration.FullName))
     }
-    foreach ($checkFile in @('building_foundation.sql', 'place_evidence.sql', 'barrier_reports.sql', 'report_votes.sql', 'clearance_observations.sql')) {
+    foreach ($checkFile in @('building_foundation.sql', 'place_evidence.sql', 'barrier_reports.sql', 'report_votes.sql', 'clearance_observations.sql', 'clearance_votes.sql')) {
         Invoke-PostgresTool 'psql' ($connectionArgs + @('-f', (Join-Path $PSScriptRoot $checkFile)))
     }
 } finally {
