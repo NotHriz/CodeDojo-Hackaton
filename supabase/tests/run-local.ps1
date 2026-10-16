@@ -21,7 +21,7 @@ try {
     foreach ($migration in (Get-ChildItem (Join-Path $PSScriptRoot '../migrations/*.sql') | Sort-Object Name)) {
         Invoke-PostgresTool 'psql' ($connectionArgs + @('--single-transaction', '-f', $migration.FullName))
     }
-    foreach ($checkFile in @('building_foundation.sql', 'place_evidence.sql', 'barrier_reports.sql', 'report_votes.sql', 'clearance_observations.sql', 'clearance_votes.sql', 'report_history.sql', 'contributor_state.sql', 'community_read_views.sql', 'place_detail_records.sql')) {
+    foreach ($checkFile in @('building_foundation.sql', 'place_evidence.sql', 'barrier_reports.sql', 'report_votes.sql', 'clearance_observations.sql', 'clearance_votes.sql', 'report_history.sql', 'contributor_state.sql', 'community_read_views.sql', 'place_detail_records.sql', 'community_records.sql')) {
         Invoke-PostgresTool 'psql' ($connectionArgs + @('-f', (Join-Path $PSScriptRoot $checkFile)))
     }
     $seedPython = Join-Path $PSScriptRoot '../../backend/.venv/Scripts/python.exe'
@@ -31,6 +31,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Seed PostgreSQL integration checks failed' }
     & $seedPython (Join-Path $PSScriptRoot 'verify_place_records.py') --pg-bin $PostgresBin --port $Port
     if ($LASTEXITCODE -ne 0) { throw 'Place record backend integration checks failed' }
+    & $seedPython (Join-Path $PSScriptRoot 'verify_community_records.py') --pg-bin $PostgresBin --port $Port
+    if ($LASTEXITCODE -ne 0) { throw 'Community record backend integration checks failed' }
 } finally {
     if ($started) {
         Invoke-PostgresTool 'pg_ctl' @('-D', $clusterPath, '-m', 'fast', '-w', 'stop')

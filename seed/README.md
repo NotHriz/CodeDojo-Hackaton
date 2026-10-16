@@ -51,7 +51,7 @@ backend/.venv/Scripts/python.exe seed/tests/test_import_places.py
 powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 ```
 
-The first command runs ten unit/CLI checks. The second runs all ten SQL suites, repeats those checks, and executes generated imports in the runner's disposable PostgreSQL cluster. It verifies repeat imports, exact text/escaping, null/unknown preservation, retained reports, full-batch rollback, and unchanged evidence after conflict. Seed fixtures are committed only inside the disposable test cluster, whose server stops afterward; no shared database is used. The runner now needs `backend/.venv` in addition to PostgreSQL 18.
+The first command runs ten unit/CLI checks. The second runs all eleven SQL suites, repeats those checks, and executes generated imports in the runner's disposable PostgreSQL cluster. It verifies repeat imports, exact text/escaping, null/unknown preservation, retained reports, full-batch rollback, and unchanged evidence after conflict. Seed fixtures are committed only inside the disposable test cluster, whose server stops afterward; no shared database is used. The runner now needs `backend/.venv` in addition to PostgreSQL 18.
 
 - Keep real observations separate from clearly labelled fictional demo records.
 - Do not invent accessibility, evidence, or check dates.

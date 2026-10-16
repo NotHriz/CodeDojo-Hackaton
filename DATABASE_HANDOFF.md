@@ -6,9 +6,9 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
-Nine PostgreSQL migrations are merged through [PR #20](https://github.com/NotHriz/CodeDojo-Hackaton/pull/20). They provide fourteen backend-only tables and three backend-only views. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
+Ten PostgreSQL migrations are merged through [PR #22](https://github.com/NotHriz/CodeDojo-Hackaton/pull/22). They provide fourteen backend-only tables and four backend-only views. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
 
-Seed preparation PR #21 is merged. The proposed `feat/database-place-records` change adds a tenth migration and fourth backend-only view for complete place-detail JSON records, plus SQL/backend-schema integration checks. It awaits review and is not merged, deployed, or connected to a runtime repository.
+Seed preparation PR #21 and place-record PR #22 are merged. The proposed `feat/database-community-records` change adds an eleventh migration with three backend-only community-record views and SQL/backend-schema checks. It awaits review and is not merged, deployed, or connected to a runtime repository.
 
 `backend/app/models.py` and `backend/app/database.py` remain placeholders. No real place/community repository is connected. Database credentials alone do not create an adapter. No trust policy or observation aggregation rule is activated, and no SQL trigger derives report status.
 
@@ -27,7 +27,8 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261016000700_report_history.sql` | Application append-only audit events, public status/count and private vote snapshots | Merged, PR #18 |
 | `20261017000100_contributor_state.sql` | Private current eligibility, neutral/bounded weight, explicit restriction reason | Merged, PR #19 |
 | `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Merged, PR #20 |
-| `20261017000300_place_detail_records.sql` | Complete public place-detail record projection | Proposed on task branch; not merged |
+| `20261017000300_place_detail_records.sql` | Complete public place-detail record projection | Merged, PR #22 |
+| `20261017000400_community_records.sql` | Public report/clearing/history DTO projections with private query access | Proposed on task branch; not merged |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 
@@ -90,7 +91,7 @@ The combined disposable runner tests repeat imports, literal quotes/backslashes/
 
 ## Complete place-record handoff
 
-The proposed `place_detail_records` invoker view exposes only `id`, `campus_id` and `record`. Query by campus/building identity; validate `record` with the existing backend `PlaceDetail`. JSON includes facilities, entrances, observations, ordered evidence and unresolved warnings without private identities/weights, ingestion times, retry keys, or internal entrance/observation IDs. No field is added to the shared API contract.
+The merged `place_detail_records` invoker view exposes only `id`, `campus_id` and `record`. Query by campus/building identity; validate `record` with the existing backend `PlaceDetail`. JSON includes facilities, entrances, observations, ordered evidence and unresolved warnings without private identities/weights, ingestion times, retry keys, or internal entrance/observation IDs. No field is added to the shared API contract.
 
 Each child collection is independently aggregated to prevent join multiplication. Entrances sort by internal UUID; observations by ingestion time then UUID; each reference list by its explicit position; warnings by observed time descending then report UUID. These are deterministic display orderings, not a facility aggregation policy. Empty collections remain arrays; missing entrance coordinates, source/notes and observation dates remain null. Building summaries stay as recorded even if observations differ. Resolved warnings are excluded without dropping the building.
 
@@ -98,9 +99,19 @@ Persisted records project `is_demo=false`; fictional fixtures exist only inside 
 
 The new verification script reads generated records from disposable PostgreSQL under service-role grants, validates exact public/nested field sets and real DTOs, and passes those records through backend search/filter/pagination logic. Its small repository bridge is test-only: it does not implement production sessions, database failure handling, request injection or the live PlaceRepository. Those still require the agreed SQLModel/PostgreSQL dependency and composition handoff. Read the small pilot dataset per the existing protocol; do not infer unknown facilities or automatically fall back to fixtures.
 
+## Complete community-record handoff
+
+The proposed eleventh migration adds `clearance_public_records`, `report_public_records` and `report_history_records`. The names describe public DTO field selection only: access remains backend-service SELECT with invoker security and no browser grants. No new table, policy threshold, runtime repository, or API field is introduced.
+
+Validate report `record` using `ReportResponse`, nested clearing records using `ClearanceResponse`, and history `record` using `ReportEventResponse`. Report evidence is ordered by position; clearing observations by submission time then UUID. Report reads retain resolved rows and live unweighted member counts; history uses its captured status/count snapshot, not recomputed current counts. Missing references/clearing lists stay empty arrays. Private author/voter IDs, weights, retry metadata, policy snapshots and internal clearing chronology copies stay outside JSON.
+
+Adapters must query reports by building and campus, sorting newest-first by `submitted_at DESC, id DESC`. Scope history by report/campus and order oldest-first by `occurred_at, sequence`; query metadata including sequence stays outside public DTOs. A report with no events has an empty timeline; separately check target existence/membership to distinguish that from a missing/out-of-campus report. Enforce pagination/count semantics and validate public/scoped reference URLs in the backend. Stored status/count consistency still depends on atomic mutation transactions.
+
+SQL checks cover independent clearing/report counts, ordered evidence, empty/zero states, resolved reports, captured history counts, SELECT-only grants and invoker/browser denial. Disposable Python checks verify exact public/nested field sets and validate actual PostgreSQL records through the existing community DTOs. Their temporary fixture mutations roll back. This is not authenticated HTTP-route integration or a production CommunityRepository.
+
 ## Verification and limits
 
-The most recent execution tested the local working tree on `feat/database-place-records`: all ten PostgreSQL 18 SQL suites, ten seed unit/CLI tests, generated-import checks, and the PostgreSQL-to-backend place-record checks passed. All ten migrations applied transactionally. SQL-suite fixtures rolled back; seed fixtures were committed only inside the disposable loopback cluster, and its server stopped afterward. Nine migrations are merged; the tenth is local work awaiting review. No shared data was touched. The combined runner requires the existing backend Python environment.
+The most recent execution tested the local working tree on `feat/database-community-records`: all eleven PostgreSQL 18 SQL suites, ten seed unit/CLI tests, generated-import checks, and place/community backend-schema integration checks passed. All eleven migrations applied transactionally. SQL-suite and community-schema fixtures rolled back; seed fixtures were committed only inside the disposable loopback cluster, and its server stopped afterward. Ten migrations are merged; community-record views are local work awaiting review. No shared data was touched. The combined runner requires the existing backend Python environment.
 
 Run from the repository root on Windows with PostgreSQL 18 installed:
 
