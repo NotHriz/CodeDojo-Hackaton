@@ -15,7 +15,7 @@ Read this file before planning or implementing features. It records the discussi
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
 - Akses Campus is the working project name. IIUM Gombak and English-only initial UI are confirmed; exact collection boundaries remain to be chosen.
-- No application has been implemented yet. The repository currently contains project documentation and an empty `.gitignore`; no application scaffold or dependency manifests exist.
+- The proposed directory structure is created: frontend folders, backend Python package/module placeholders, seed guidance, environment examples, and `.gitignore` rules. No runnable application, dependency manifests, database schema, or external integration exists yet.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
 - Hosting is agreed: Netlify Free frontend, Render Free Python backend, and Supabase PostgreSQL/Auth/Storage. Accounts, credentials, and deployments are not configured yet.
 - The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Exact schemas remain to be finalized.
@@ -61,26 +61,32 @@ Development: run Vite and FastAPI separately, with Vite proxying `/api` to FastA
 
 Use Supabase PostgreSQL for the deployed shared prototype and Supabase Storage for photos. Do not store persistent data on Render Free's ephemeral filesystem. SQLite is a local development fallback only. Verify that reports survive backend restarts. Render Free sleeps after 15 minutes without inbound traffic and can take about a minute to wake; rehearse and check health before presenting. Supabase Free can pause inactive projects; check provider allowances before the event. References: [Render Free](https://render.com/docs/free), [Supabase pricing](https://supabase.com/pricing), [Netlify Functions](https://docs.netlify.com/build/functions/overview/).
 
-### Planned repository structure
+### Repository structure
 
-These paths are proposed and do not exist yet.
+These paths exist as a skeleton. Frontend subdirectories contain `.gitkeep` files and backend modules contain documentation-only placeholders. Package initializers are present in `app/`, `routers/`, and `services/`. Component READMEs and `.env.example` files describe responsibilities and proposed configuration; no application startup commands are available yet.
 
 ```text
 frontend/
+  README.md
+  .env.example
   src/
     components/       # Map, markers, filters, bottom sheet
     views/            # Explore, reports, sign-in, community
     composables/      # Shared reactive state and logic
     services/         # API client
 backend/
+  README.md
+  .env.example
   app/
+    __init__.py
     main.py
     models.py
     schemas.py
     database.py
     routers/          # Places, reports, votes, authenticated identity, chat
     services/         # Vote aggregation, trust rules, report transitions, AI tools
-seed/
+seed/README.md
+.gitignore
 README.md
 onboarding.md
 ```
@@ -332,7 +338,7 @@ Suggested 24-hour allocation:
 ## Next actions
 
 - Use the confirmed role split and IIUM Gombak pilot; finalize field-collection boundaries and experimental trust/transition rules.
-- Scaffold the documented stack, pin dependencies, and add working setup commands and environment examples to README.md.
+- Turn the existing directory skeleton into runnable Vue/FastAPI applications, pin dependencies, implement configuration loading, and add verified setup commands to README.md. Environment examples already exist; update them alongside implementation.
 - Configure a restricted Google Maps browser key and map ID; deploy an early map/list prototype.
 - Check the current IIUM accessibility map and reporting process.
 - Seek feedback from a wheelchair user or relevant campus representative through a team-authorized approach.

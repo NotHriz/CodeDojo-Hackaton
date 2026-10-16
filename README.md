@@ -8,7 +8,7 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-**Planning and documentation only.** There is no runnable application, database schema, dependency manifest, seed dataset, or deployment yet. The stack and structure below describe the implementation baseline.
+**Project structure created; implementation pending.** Frontend directories, Python package/module placeholders, seed documentation, environment examples, and ignore rules are present. There is no runnable application, database schema, dependency manifest, seed dataset, or deployment yet.
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
@@ -87,24 +87,32 @@ During development, Vite will proxy `/api` to FastAPI. In production, Netlify se
 
 Render Free sleeps after 15 minutes without inbound traffic and can take about a minute to restart. Keep data and photos in Supabase, not the backend's ephemeral filesystem. Warm and verify the deployed API before pitching. [Render limitations](https://render.com/docs/free), [Supabase allowances](https://supabase.com/pricing)
 
-## Planned project structure
+## Project structure
 
-Only the documentation files exist today; application directories will be created during implementation.
+The directories and backend placeholders below exist. `.gitkeep` files preserve empty frontend folders in Git. Module placeholders contain documentation only; dependencies and application entry points still need implementation.
 
 ```text
-frontend/src/
-  components/
-  views/
-  composables/
-  services/
-backend/app/
-  main.py
-  models.py
-  schemas.py
-  database.py
-  routers/
-  services/
-seed/
+frontend/
+  README.md
+  .env.example
+  src/
+    components/
+    views/
+    composables/
+    services/
+backend/
+  README.md
+  .env.example
+  app/
+    __init__.py
+    main.py
+    models.py
+    schemas.py
+    database.py
+    routers/__init__.py
+    services/__init__.py
+seed/README.md
+.gitignore
 README.md
 onboarding.md
 ```
@@ -112,6 +120,8 @@ onboarding.md
 ## Setup readiness
 
 Installation and startup commands will be added once the scaffold and dependency manifests exist. Do not assume `npm run dev` or a Python entry point is available yet.
+
+See the [frontend skeleton notes](frontend/README.md), [backend skeleton notes](backend/README.md), and [seed-data guidance](seed/README.md). Environment examples are committed; local `.env` files, dependencies, build output, and Python caches are ignored.
 
 Before implementation, prepare:
 
@@ -137,7 +147,7 @@ Proposed configuration names, to finalize when scaffolding:
 | `AI_API_KEY` | Backend | DeepSeek credential; secret |
 | `AI_MODEL` | Backend | Recommended value: `deepseek-flash` |
 
-All `VITE_*` variables are public build configuration. Never place database, privileged storage-service, or AI secrets in them. Supabase public keys are not access controls: configure appropriate database/storage policies and validate identity on the backend. Add `.env.example` files with placeholders and ignore real `.env` files when the scaffold is created.
+All `VITE_*` variables are public build configuration. Never place database, privileged storage-service, or AI secrets in them. Supabase public keys are not access controls: configure appropriate database/storage policies and validate identity on the backend. Keep committed `.env.example` files limited to placeholders and non-secret defaults; real `.env` files are ignored.
 
 ## Google Maps cost
 
