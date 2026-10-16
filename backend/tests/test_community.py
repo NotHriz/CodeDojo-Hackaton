@@ -60,8 +60,11 @@ class Store:
         return self.history
 
     def append_event(self, report, previous_status, action):
+        # Windows clocks can assign equal times to sequential requests. Keep
+        # lifecycle fixtures ordered without relying on random UUID tie breaks.
+        occurred_at = max(datetime.now(timezone.utc), self.history[-1].occurred_at + timedelta(microseconds=1))
         self.history.append(ReportEventResponse(
-            id=uuid4(), report_id=report.id, occurred_at=datetime.now(timezone.utc),
+            id=uuid4(), report_id=report.id, occurred_at=occurred_at,
             action=action, previous_status=previous_status, new_status=report.status,
             community=report.community.model_copy(deep=True),
         ))
