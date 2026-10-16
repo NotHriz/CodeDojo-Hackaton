@@ -6,15 +6,21 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
-Eleven PostgreSQL migrations are merged through [PR #23](https://github.com/NotHriz/CodeDojo-Hackaton/pull/23), providing fourteen backend-only tables and seven backend-only views. No shared Supabase project was linked or migrated and no real campus records were imported.
+| Deliverable | Implementation / merge status | Verification / deployment |
+| --- | --- | --- |
+| Fourteen tables, seven backend-only views, eleven migrations | Merged through PR #23 | All eleven SQL suites pass locally; shared history/schema unverified |
+| Insert-only collection/import tooling | Merged PR #21 | Ten unit/CLI checks and disposable import/retry/conflict checks pass; no actual campus dataset found |
+| Lazy SQLModel sessions and real building repository/API | PR #24 is MERGED (confirmed via GitHub, 17 October local date) | Persisted HTTP reads and app recreation pass locally; shared runtime not verified |
+| Community read-view/private eligibility mappings and explicit transaction context | Prepared on `feat/database-delivery-readiness`; pending PR review | Service-role mappings, public DTO fields, commit, exception/constraint rollback and connection release pass |
+| Read-only target audit and migration/import plan | Current task | Four audit privacy/unit checks and disposable audit checks pass, including rejected writes and detected grant drift |
+| Runtime CommunityRepository | Backend-owner responsibility, not implemented | Atomic retry/concurrency/status/history integration remains pending |
+| Shared Supabase deployment / real data import | No writes performed by this task | Configured connection times out; migration/data state unknown |
 
-The current `feat/connect-building-browsing` change connects `DATABASE_URL` to operation-scoped SQLModel sessions and `PostgresPlaceRepository` in `create_app`. Building list/details read persisted facilities, evidence and unresolved warnings from `public.place_detail_records`. Explicit injected repositories take precedence. Database failure never activates demo fixtures; no schema creation runs at startup.
+The latest task explicitly restricts writable scope to `supabase/**`, `seed/**`, `backend/app/models.py`, `backend/app/database.py` and this handoff. Earlier building-browsing cross-area authorization ended with that task. No frontend, backend services/routers, manifests, shared contracts or other root files were edited for this task. No new migration, trust threshold, reputation rule, field or Storage policy was introduced. The user authorized publishing this task as a PR; it is pending review and has not been merged. No shared database writes are authorized by the PR request.
 
-The user authorized this integration slice across database files, backend composition/services/dependencies, and frontend details loading. API contracts are unchanged. Building details and active warnings now remain visible when the separate reports endpoint returns 503. Ownership returns to the existing area owners after this task.
+The ignored CLI project link, Auth origin and database project identifiers match; demo data is off. The credential-safe target fingerprint is `efce16da98c9af3c`. The sandbox first denied outbound access; an authorized unrestricted read-only retry timed out, and the sanitized audit confirms `connection_timeout`. The read-only audit was rerun before PR publication after the user updated local configuration; the same target still timed out from this environment (exit 1). The four audit privacy/unit checks were rerun and passed. This proves neither successful login nor an empty/migrated schema. Shared version/history/schema, grants, policies, record counts and Storage configuration remain unverified. Credentials/local link files were not added to source control; `supabase/.gitignore` now excludes CLI caches and generated audit/import files.
 
-Community mutations still require a real transactional repository and reviewed trust thresholds/versioning. No policy or observation aggregation rule is activated and no SQL trigger derives report status. This task adds no migration.
-
-Verification: 148 backend tests and the frontend production build pass. The disposable PostgreSQL runner passes all eleven SQL suites, ten seed tests, projection checks and the configured runtime HTTP checks under service-role permissions. Runtime checks cover persisted list/details, app recreation, unknown facilities, warnings, campus filtering, pagination, missing IDs, connection release and sanitized database failure with demo enabled. A final full-suite run exposed an existing equal-timestamp history fixture failure (147 passed, one failed); the test fixture now assigns strictly increasing event times, and the final full rerun passes all 148 tests with dependency checks clean. The real Vue browser smoke check also passes: stored list/details and warnings remain visible despite reports 503, retry works, refresh preserves results and unknown facilities do not match required filters. All records used here are fictional test fixtures in an isolated local cluster.
+See [the exact migration/import plan](supabase/DEPLOYMENT_PLAN.md). It lists the eleven accepted files in order and requires target/history reconciliation plus a reviewed dry run before shared-write approval. No shared-write approval has been requested because a concrete remote pending set cannot yet be verified. Do not reset the project or combine the alternate foundation schema.
 
 ## Migration inventory
 
@@ -41,7 +47,7 @@ The alternate remote `feat/database-foundation` branch uses another places schem
 ## Backend integration order
 
 1. Implemented under the user-authorized scoped handoff: SQLModel/Psycopg dependencies and pinned manifests. User 3 owns models/session implementation; dependency manifests, service logic, composition wiring and API contracts require the backend owner's scoped handoff. Connections must not open at module import time.
-2. Implemented in the current browsing task: SQLModel models, lazy PostgreSQL engine, operation-scoped sessions and validated place DTOs. Database failures propagate as sanitized HTTP errors.
+2. Merged through PR #24: SQLModel models, lazy PostgreSQL engine, operation-scoped sessions and validated place DTOs. Database failures propagate as sanitized HTTP errors.
 3. Implemented: the read-only [PlaceRepository](contracts/places.md) uses the persisted place-detail view. Map building identity to `place_id` where required, join campus identity, preserve unknown facilities and null observation dates, and order evidence by position. Agree how current facility summaries are maintained; do not invent a latest-observation rule. Join actual unresolved reports into active warnings and exclude resolved reports.
 4. Implement transactional contributor eligibility checks plus audit writes before enabling community writes. Agree explicit trust thresholds and policy-version assignment with the backend owner: `TrustPolicy` currently has no version field, while vote/history storage requires a private version/snapshot. Stored versions in tests are illustrative, not activated settings.
 5. Implement the [CommunityRepository](contracts/community.md) transaction requirements and verify real concurrency. Inject the real adapters and reviewed policy through `create_app(...)` only after their integration checks pass. Public response shapes remain backend-owned.
@@ -101,7 +107,7 @@ Each child collection is independently aggregated to prevent join multiplication
 
 Persisted records project `is_demo=false`; fictional fixtures exist only inside disposable verification and are never a runtime demo adapter. The existing explicit development demo remains separate and unchanged. SQL stores reference URLs; backend DTO validation and public/scoped reference permissions still apply. Access is service-role SELECT only, with invoker permissions/RLS retained through underlying tables/views (PostgreSQL 15+).
 
-The new verification script reads generated records from disposable PostgreSQL under service-role grants, validates exact public/nested field sets and real DTOs, and passes those records through backend search/filter/pagination logic. Its small repository bridge is test-only: it does not implement production sessions, database failure handling, request injection or the live PlaceRepository. Those still require the agreed SQLModel/PostgreSQL dependency and composition handoff. Read the small pilot dataset per the existing protocol; do not infer unknown facilities or automatically fall back to fixtures.
+The projection-only verification script remains test-only, but the real `PostgresPlaceRepository` and composition wiring are now merged in PR #24. `verify_runtime_places.py` verifies configured PostgreSQL -> repository -> HTTP reads under service-role permissions, including warnings, unknown values, pagination, application recreation and sanitized database failures. It uses only disposable fictional records and does not prove shared deployment.
 
 ## Complete community-record handoff
 
@@ -115,7 +121,11 @@ SQL checks cover independent clearing/report counts, ordered evidence, empty/zer
 
 ## Verification and limits
 
-The most recent execution tested the local working tree on `feat/database-community-records`: all eleven PostgreSQL 18 SQL suites, ten seed unit/CLI tests, generated-import checks, and place/community backend-schema integration checks passed. All eleven migrations applied transactionally. SQL-suite and community-schema fixtures rolled back; seed fixtures were committed only inside the disposable loopback cluster, and its server stopped afterward. Ten migrations are merged; community-record views are local work awaiting review. No shared data was touched. The combined runner requires the existing backend Python environment.
+Current-task verification: all eleven PostgreSQL 18 SQL suites, ten seed unit/CLI tests, generated-import integration, place/community DTO projection checks and configured building HTTP checks passed. New owned mapping/session checks pass under service-role permissions, including commit across sessions, rollback after a Python exception and a real database constraint failure, private-field exclusion and connection release. The audit passes its four privacy/unit checks and disposable catalog/permission/DTO checks; a follow-up check confirms writes are rejected in its read-only transaction and accidental browser SELECT grants are detected. All local servers started for these checks were stopped.
+
+The existing backend suite also passes: 148 tests, one existing Starlette HTTPX deprecation warning, and clean `pip check`. Frontend build/browser smoke were verified in the merged browsing task, not rerun for these database-only changes. One initial database run stalled while native PostgreSQL startup output was redirected; its isolated cluster was stopped and the direct rerun completed successfully. No SQL/schema/application test failure remains.
+
+Local fixtures are explicitly fictional. These checks do not implement or prove backend mutation concurrency, real Supabase identity, shared restart persistence, paid AI behavior or intended-user accessibility truth. No shared migrations, data imports or Storage changes occurred.
 
 Run from the repository root on Windows with PostgreSQL 18 installed:
 
@@ -133,6 +143,36 @@ Coverage includes defaults, constraints, coordinate bounds, evidence ordering/li
 - Connect real read/write adapters and verify competing/retried submissions produce one record/event, changed payload conflicts, and vote/status/history changes commit or roll back together.
 - Test public-field privacy and active warnings through places, reports and chat; confirm clearing support changes recalculate parent status without erasing earlier evidence.
 - Obtain actual collected observations for the merged seed preparation tooling. Review and apply generated SQL as a separate database-owner task. Keep fictional tests separate; never turn them into an outage fallback.
-- Configure and verify Supabase access/Storage policies, migration history, shared deployment and persistence across backend restarts. No shared reset or deployment is authorized by this handoff.
+- Restore shared connectivity and verify actual migration history, grants, schema and persisted runtime reads. Storage is deferred until an upload requirement and its policy are agreed. No shared reset or deployment is authorized by this handoff.
 
 See [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) for backend readiness and [COLLABORATION.md](COLLABORATION.md) for ownership and PR coordination.
+
+## Exact backend-owner implementation handoff
+
+The database-owned interface is now:
+
+- `Database.session()`: operation-scoped SQLModel session; no implicit success commit, closed on exit. Read failures propagate.
+- `Database.transaction()`: one owned SQLModel session/transaction, commit on successful context exit, rollback on any exception and always release the connection. Keep **all** mutation work inside this context; returning a DTO must not bypass commit failure handling.
+- `Campus`, `Building`, `PlaceDetailRecord`: existing mapped public-schema identities and complete place projection.
+- `ReportPublicRecord`, `ClearancePublicRecord`, `ReportHistoryRecord`: mapped read-only community views. Validate `.record` using the existing response DTOs; never INSERT/UPDATE these views or call `SQLModel.metadata.create_all`. Filter report/campus/target and use history `occurred_at, sequence` ordering. These mappings are exercised against actual PostgreSQL in the new suite, not unused copies of every schema table.
+- `ContributorStateRecord`: private eligibility/weight/reason/update-time storage only. Map only eligibility/weight into the existing internal ContributorState; never serialize this ORM row publicly. Refresh update time explicitly during accepted changes.
+
+The backend owner must implement the existing `CommunityRepository` protocol in its services scope and wire it through `create_app`. Reports/clearances need private author lookups from their base tables to construct ReportRecord/ClearanceRecord; author IDs deliberately do not appear in the public JSON views. Existing SQL constraints/parameterized SQL can be used inside the owned session without adding speculative ORM mappings for every table.
+
+For each mutation: recheck pilot membership/chronology/self-vote rules and contributor eligibility **inside** the transaction; coordinate locks for missing contributor rows as well as existing rows. Serialize parent-report mutations and lock the clearing target when applicable. Agree a consistent lock order with restriction administration. PostgreSQL uniqueness is a final guard, not a complete concurrent retry algorithm.
+
+Normalize user payloads into SHA-256 excluding server submission time; scoped keys are `(author_id, building_id, idempotency_key)` for reports and `(author_id, report_id, idempotency_key)` for clearing claims. Identical concurrent retries must return the original record/time with exactly one creation event, while changed payloads raise IdempotencyConflict. Handle conflict races in a way that does not leave the transaction aborted.
+
+Votes upsert by target/voter and snapshot freshly checked bounded weight plus all policy fields. Recompute clearance and parent status with the existing backend functions, preserving a resolved report when another corroborated clearance remains and reopening its prior derived state when clearing support is reversed. Commit votes, statuses and append-only history together. Public counts are distinct voters, never weight sums. Test concurrent distinct votes, repeated same-user votes, retry conflicts, restriction races and injected failures before enabling writes.
+
+**Policy interface is still a backend/team decision:** TrustPolicy has four numerical fields and no version; SQL vote/event rows require an explicit private version plus snapshots. The backend owner must define the reviewed version binding and policy-change behavior before activation. Neither this task nor the database chooses production thresholds or silently changes accepted snapshots.
+
+There is also an existing history integration gap: the HTTP history route currently sorts equal-time events by UUID, whereas the persisted timeline is ordered by occurrence time and sequence. The backend owner must preserve the repository's persisted order or otherwise reconcile ordering without exposing sequence as a new public field. No router or contract was changed here.
+
+## Frontend and external handoff
+
+Frontend owner: consume the existing contracts, retain independent details/report error states, display unresolved warnings and unknown facilities, and add chat evidence cards, clearance submissions/votes and report history when backend persistence is ready. Keep privileged database/AI keys out of VITE variables. No frontend edit is part of this task.
+
+External dependencies: restore configured Supabase connectivity; confirm shared migration history/permissions; collect and human-review real campus observations using `seed/collection-template.json`; obtain approval for the exact migration/import SQL; configure Auth signing keys/redirects and hosting with their owners. No actual import SQL can be prepared without observations. The empty template validates and generates zero data inserts. Photo upload/Storage remains deferred, rather than silently provisioning a public bucket.
+
+Person 3's locally verifiable code/schema/session/seed-plan deliverables are complete for this scope. Shared verification/application remains externally blocked, and the complete application still requires backend transactional implementation and frontend integration. SQL tests alone do not establish a working application.

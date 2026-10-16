@@ -142,7 +142,23 @@ The eleventh SQL suite verifies counts/evidence/empty/resolved/history behavior 
 
 ## Pending handoff
 
-Audit/contributor-state transaction wiring, restriction administration/history, complete community transactions, observation aggregation and Storage/Auth policies remain incomplete; seed tooling is local work awaiting review and real data/shared import remain pending. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. Building models, operation-scoped sessions and SQLModel/Psycopg dependencies are implemented in the authorized browsing integration. `create_app` wires the place adapter from `DATABASE_URL`, with explicit injections taking precedence. API shapes and default-off demo protections are preserved. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
+Backend community transaction wiring, restriction administration/history and reviewed trust-policy versioning remain incomplete; the seed/import tooling is merged but real data/shared import remain pending. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. Building models, sessions and adapter wiring are merged in PR #24. `create_app` wires the place adapter from `DATABASE_URL`, with explicit injections taking precedence. API shapes and default-off demo protections are preserved. Do not combine the alternate `feat/database-foundation` migration unchanged with the accepted sequence.
+
+The current database-owner task adds mapped community read views/private
+contributor state and `Database.transaction()` (commit on success, rollback on
+failure). `tests/verify_session_mappings.py` exercises them under service-role
+permissions against disposable PostgreSQL, including real constraint rollback.
+No runtime CommunityRepository or new migration is introduced.
+
+Run `backend/.venv/Scripts/python.exe supabase/inspect_target.py` for a read-only,
+credential-safe audit using ignored backend configuration. It checks migration
+inventory/history, relations, mapped columns, RLS, invoker views, effective role
+grants, event sequence permissions and public DTO samples. The current configured
+shared target times out; do not claim its schema or grants were verified.
+[DEPLOYMENT_PLAN.md](DEPLOYMENT_PLAN.md) records the migration/import review gates.
+The combined local runner also runs audit privacy checks, detects accidental
+browser grants and proves the audit transaction rejects writes. No shared writes
+are authorized or performed, and no Storage bucket/policy is provisioned.
 
 The database owner also owns `backend/app/models.py`, `backend/app/database.py`, and `seed/`. The backend owner owns API schemas and service logic; agree fields and session interfaces before either side implements them.
 

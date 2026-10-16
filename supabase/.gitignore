@@ -1,0 +1,7 @@
+# Supabase CLI link/cache files can contain connection details.
+.temp/
+.branches/
+
+# Generated local audit results and reviewed import plans are not source files.
+local-audit*.json
+reviewed-import*.sql
