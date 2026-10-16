@@ -18,6 +18,7 @@ Read this file before planning or implementing features. It records the discussi
 - No application has been implemented yet. The repository currently contains project documentation and an empty `.gitignore`; no application scaffold or dependency manifests exist.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
 - Hosting and object-storage providers, credentials, pilot boundaries, and named team assignments remain open. The stack is documented as a build plan, not installed or deployed software.
+- The user requested an AI chatbot as a planned project feature. Search and place questions are in MVP scope; conversational report drafting remains a stretch feature. The provider/model and exact schemas have not been supplied or selected.
 - The MVP, role split, and schedule below are recommendations from the planning discussion, not completed work.
 - Campus data coverage, access to intended users, and the current state of IIUM's existing accessibility map remain unverified.
 
@@ -32,13 +33,13 @@ Read this file before planning or implementing features. It records the discussi
 | Database access | SQLModel | Python models and database queries |
 | Database | PostgreSQL | Shared persistent places, observations, reports, reviewer accounts, and history |
 | Photos | Object storage, provider undecided | Image files; store references and metadata in PostgreSQL |
-| Optional AI | Provider undecided, backend-only integration | Convert natural-language requests into supported filters |
+| AI assistant | Provider/model undecided, backend-only tool calling | Search campus records, explain evidence, and return structured map/list results |
 
 Use JavaScript unless the team explicitly chooses TypeScript. Start with Vue composables for shared state. Introduce additional libraries only when they resolve an actual need.
 
 ### Application boundaries
 
-Use a single repository and one Python backend, organized into feature modules. The browser calls Google Maps directly for map display and calls FastAPI under `/api` for application data. Database credentials and optional AI credentials stay on the backend. The browser never connects directly to PostgreSQL.
+Use a single repository and one Python backend, organized into feature modules. The browser calls Google Maps directly for map display and calls FastAPI under `/api` for application data and chat. Database and AI credentials stay on the backend. The browser never connects directly to PostgreSQL or invokes privileged model tools itself.
 
 ```mermaid
 flowchart TD
@@ -46,7 +47,7 @@ flowchart TD
     Vue -->|Application requests| API[FastAPI /api]
     API --> DB[(PostgreSQL)]
     API --> Photos[Object storage]
-    API -. Optional search interpretation .-> AI[AI service]
+    API -->|Validated tool calling| AI[AI service]
 ```
 
 Development: run Vite and FastAPI separately, with Vite proxying `/api` to FastAPI. Production plan: build Vue, serve its assets through the FastAPI service, and expose one public origin. Register `/api` routes before a frontend fallback; missing API routes must return API errors rather than HTML. Client-side routes need an SPA fallback. Hosting selection remains open.
@@ -70,8 +71,8 @@ backend/
     models.py
     schemas.py
     database.py
-    routers/          # Places, reports, authentication
-    services/         # Report transitions, optional AI
+    routers/          # Places, reports, authentication, chat
+    services/         # Report transitions, AI orchestration and tool handlers
 seed/
 README.md
 onboarding.md
@@ -86,6 +87,7 @@ onboarding.md
 | `POST /api/reports` | Submit an unverified report | Public, with validation and abuse controls |
 | `PATCH /api/reports/{id}/status` | Confirm, reject, or resolve a report and append history | Authenticated reviewer |
 | `POST /api/auth/login` | Authenticate a reviewer | Valid reviewer credentials |
+| `POST /api/chat` | Interpret a campus question and return grounded answers, cards, and map/list actions | Public, with request limits |
 
 Agree request/response schemas before splitting implementation. A required facility filter matches `yes`, not `unknown`. Enforce allowed status transitions and reviewer authorization on the backend. Record the status change and history entry in one transaction.
 
@@ -139,6 +141,7 @@ Build one campus area with approximately 10–15 seeded locations, such as libra
 3. **Inspect:** Show specific facility observations, photos when available, information source, and last checked date.
 4. **Report:** Let a contributor submit a temporary barrier or outdated-information report.
 5. **Review and resolve:** Let a reviewer confirm, reject, or resolve a report, with visible status history.
+6. **Ask the assistant:** Search campus records conversationally and ask place-specific questions, with source cards and synchronized map/list results.
 
 The reporting workflow is the proposed differentiator and main demo moment. If time becomes tight, simplify map interactions and visual extras before removing the complete report lifecycle.
 
@@ -151,15 +154,38 @@ The reporting workflow is the proposed differentiator and main demo moment. If t
 - University systems integration, unless access is actually obtained.
 - Complex reputation systems, gamification, or social networking.
 
-### Optional stretch feature
+### AI chatbot scope and implementation contract
 
-Natural-language search can translate “Find somewhere to study with a step-free entrance and an accessible toilet” into the existing filters.
+The chatbot is a planned MVP feature. Build the place-query API and normal filters first, then reuse their logic through model tools. It should help users complete campus decisions and visibly interact with the map.
 
-Only add this after the core flow works. Display the interpreted filters so users can correct them. Search results must come from stored records; AI must not invent places, facilities, verification, or safety claims. Keep manual filters usable if the AI service fails.
+| Capability | Tool | Expected behavior |
+| --- | --- | --- |
+| “Find somewhere to study with a step-free entrance and accessible toilet” | `search_places` | Query stored records, return matching places and editable interpreted filters, update map/list |
+| “Does this building have step-free access?” | `get_place_details` | Return observations, evidence, check dates, and active report status; clarify ambiguous place names |
+| “The library ramp is blocked” | `prepare_barrier_report` (stretch) | Prepare an editable draft; ask the user to review and explicitly submit through the ordinary report flow |
+
+Architecture: `Vue chat panel -> POST /api/chat -> AI proposes an allowed tool -> backend validates and executes it -> database evidence -> grounded answer and structured UI results`.
+
+Proposed request fields are `message`, bounded conversation context, and optional selected place ID. Proposed response fields are `answer`, `places`, `sources`, `applied_filters`, and optional `draft_report`. Finalize exact schemas with teammates; no request/response implementation exists yet. The frontend should render markers and source cards from validated backend records rather than parsing model prose.
+
+Implementation rules:
+
+- Allow only named tools with explicit schemas. Validate arguments, place IDs, result limits, and campus scope on the backend. Do not let the model execute arbitrary SQL or access credentials.
+- Reuse place-query and report-validation services; do not create conflicting AI-specific accessibility rules.
+- Every factual place answer must be supported by returned observations or reports. Source cards show place name, facility values, available evidence, observation date, and verification state.
+- Missing data stays unknown. Never invent accessibility, timestamps, photos, or guarantees, and never present an unverified barrier as confirmed.
+- Treat retrieved descriptions, reports, and chat text as untrusted input. They cannot override tool permissions or system instructions.
+- Keep writes outside the initial chatbot tools. Report drafting does not submit anything. An explicit user submission uses `POST /api/reports` and always starts unverified; only an authenticated reviewer can change status.
+- Keep manual filters and details usable during AI failures. Show clear retry/error states and preserve the user's query.
+- Limit input/context size, tool iterations, result count, request rate, and provider timeout. Select model/provider and establish a usage budget before integrating; AI charges are separate from map charges.
+- Keep `AI_API_KEY` backend-only and configure `AI_MODEL` there. These are proposed configuration names, not existing settings. Do not send disability histories, exact user location, or unrelated records to the provider. Avoid persistent raw chat storage by default; document any retention decision.
+- Keep the chat panel keyboard accessible, provide a labelled input and announced response/loading state, and preserve focus when map results change.
+
+No vector database, model training, agent framework, or open-ended web browsing is required for this MVP. Structured queries over the small campus dataset are sufficient.
 
 ## Core demo and acceptance criteria
 
-**Demo story:** A student finds a study location, checks its evidence, and sees a newly submitted report about a blocked ramp. A reviewer confirms the report and later marks it resolved.
+**Demo story:** A student asks the assistant for a study space with a step-free entrance and accessible toilet. Matching markers and evidence cards appear. The student checks a temporary warning, submits a barrier report through the regular flow, and a reviewer confirms it and later marks it resolved. Chat-based report drafting is an optional extension.
 
 The MVP is demo-ready when:
 
@@ -172,6 +198,10 @@ The MVP is demo-ready when:
 - Reviewer actions are restricted to the reviewer role, rather than merely hidden in the UI.
 - The core flow works with a keyboard and has readable labels, contrast, and focus indicators.
 - Loading, empty results, failed submissions, and unavailable external services have understandable states.
+- A chatbot search returns database-backed results, visible interpreted filters, and matching map/list records.
+- Place answers show sources, unknown information, and unverified warnings correctly; ambiguous names trigger clarification.
+- The assistant cannot execute unsupported tools or change report status, including when retrieved text contains instructions.
+- The normal search/list remains functional when the AI times out or fails.
 - Demo data is clearly identified, and the team has rehearsed the full flow on the deployed build.
 
 ## Suggested data model
@@ -230,16 +260,16 @@ Assign actual names once the team agrees. Balance tasks against the team's stren
 
 | Owner | Main responsibility |
 | --- | --- |
-| Teammate 1 | Accessible UI, place details, list, and filters |
+| Teammate 1 | Accessible UI, place details, list, filters, and chat panel/source cards |
 | Teammate 2 | Data model, persistence, report lifecycle, reviewer authorization, and deployment |
-| Teammate 3 | Map integration, seed data/evidence, user validation, and pitch preparation |
+| Teammate 3 | Map integration, chatbot tool orchestration using shared backend services, seed evidence, and demo coordination; rebalance workload as needed |
 
 Suggested 24-hour allocation:
 
 - **Hours 0–2:** Validate the problem, check the existing IIUM map, agree scope and stack, sketch the demo, and define shared data/API contracts.
 - **Hours 2–6:** Establish the application, seed data, initial deployment, and a working place list/details flow.
-- **Hours 6–14:** Build filters, map, report submission, reviewer actions, and persistence. Integrate continuously.
-- **Hours 14–18:** Complete evidence/status presentation, accessibility improvements, and error handling. Add stretch work only if the MVP is stable.
+- **Hours 6–14:** Build filters, map, report submission, reviewer actions, and persistence. Once place queries work, connect chatbot search/details tools. Integrate continuously.
+- **Hours 14–18:** Complete chatbot source cards and map synchronization, evidence/status presentation, accessibility, and error handling. Add report drafting only if the MVP is stable.
 - **Hours 18–24:** Freeze features, verify the deployed demo, fix material issues, prepare slides, and rehearse Q&A.
 
 ## Engineering and future-agent guidance
@@ -251,7 +281,7 @@ Suggested 24-hour allocation:
 5. Build the smallest working vertical flow first: stored place -> list -> details -> persistent report -> reviewer action.
 6. Keep backend secrets out of source control and browser bundles. A restricted browser Google Maps key is intentionally public. Document environment variable names without real values in committed examples.
 7. Validate report input and authorization on the trusted backend, not only in client UI controls.
-8. Verify meaningful behavior: filtering unknown facilities, persistent reports, allowed status transitions, reviewer access restrictions, and the main keyboard flow.
+8. Verify meaningful behavior: filtering unknown facilities, persistent reports, allowed status transitions, reviewer access restrictions, the main keyboard flow, grounded chat results, invalid tool rejection, and AI failure fallback.
 9. Use the chosen framework's standard build/lint checks. Document actual commands once tooling exists; do not claim checks passed unless run.
 10. Record setup, seed/reset procedure, deployment details, and known limitations in the repository as implementation progresses.
 11. Keep this onboarding accurate as decisions change. Clearly separate completed work, remaining work, and future ideas.
@@ -266,7 +296,8 @@ Suggested 24-hour allocation:
 - Seek feedback from a wheelchair user or relevant campus representative through a team-authorized approach.
 - Agree the three facility definitions and collect a small, honestly labelled dataset.
 - Assign owners and define the place/report data contract.
-- Implement and deploy the first end-to-end flow before adding optional technology.
+- Select an AI provider/model and finalize bounded tool schemas plus the chat response contract.
+- Implement and deploy the core flow, then integrate chatbot search/details over the same data services.
 
 ## Pitch and Q&A preparation
 
@@ -277,5 +308,5 @@ Prepare answers to:
 - **Why not Google Maps or AccessNow?** Show the campus-specific evidence and reporting workflow. Acknowledge existing tools and avoid unverified claims about their limitations.
 - **How do you know information is correct?** Explain sources, observation dates, unknown values, and reviewer status, including the prototype's limits.
 - **Who maintains it after the hackathon?** Propose campus stewardship and recurring checks; do not present a proposed partner as committed.
-- **What is the AI doing?** If implemented, it only translates search intent into visible filters over stored data.
+- **What is the AI doing?** It interprets campus questions, calls permitted search/details tools over stored records, and returns evidence-backed cards and map results. Report drafting, if implemented, requires explicit submission. Demonstrate only capabilities that actually work.
 - **What did you validate?** Report actual interviews, observations, and tests. If none occurred, say so and explain the next validation step.
