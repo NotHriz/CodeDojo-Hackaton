@@ -19,6 +19,7 @@ from app.services.places import PlaceRepository
 from app.services.auth import SupabaseTokenVerifier, TokenVerifier
 from app.services.chat import ChatBudget, ChatProvider, DeepSeekProvider
 from app.services.community import CommunityRepository, TrustPolicy
+from app.services.demo_places import DemoPlaceRepository
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +42,30 @@ def create_app(
 ) -> FastAPI:
     """Build the API without opening database connections or contacting providers."""
     settings = settings if settings is not None else Settings()
+    # Explicit real adapters always take precedence; failures never trigger demo data.
+    effective_places = place_repository
+    if effective_places is None and settings.demo_data_enabled:
+        effective_places = DemoPlaceRepository()
+    demo_mode = isinstance(effective_places, DemoPlaceRepository)
+    if demo_mode and settings.app_env == "production":
+        raise ValueError("Demo building data is not allowed in production.")
+    if demo_mode and community_repository is not None:
+        raise ValueError("Local demo buildings cannot be combined with a community persistence adapter.")
     api = FastAPI(
         title="Akses Campus API",
         version="0.1.0",
-        description="IIUM Gombak accessibility API. Building persistence requires an adapter.",
+        description=(
+            "LOCAL DEMO: fictional building records, not verified IIUM facilities. Real AI requests still use DeepSeek credit."
+            if demo_mode else "IIUM Gombak accessibility API. Building persistence requires an adapter."
+        ),
         debug=False,
         docs_url="/api/docs",
         redoc_url=None,
         openapi_url="/api/openapi.json",
     )
     api.state.settings = settings
-    api.state.place_repository = place_repository
+    api.state.place_repository = effective_places
+    api.state.demo_mode = demo_mode
     api.state.community_repository = community_repository
     api.state.trust_policy = trust_policy
     api.state.contribution_budget = contribution_budget if contribution_budget is not None else ChatBudget(

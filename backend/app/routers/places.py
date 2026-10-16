@@ -30,6 +30,7 @@ Repository = Annotated[PlaceRepository, Depends(get_place_repository)]
 )
 def list_places(
     repository: Repository,
+    request: Request,
     campus_id: Annotated[str, Query(min_length=1, max_length=128)] = "iium-gombak",
     q: Annotated[str | None, Query(max_length=200)] = None,
     category: Annotated[str | None, Query(max_length=64)] = None,
@@ -39,7 +40,7 @@ def list_places(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> PlaceListResponse:
-    return search_places(
+    result = search_places(
         repository,
         campus_id=campus_id,
         q=q,
@@ -50,6 +51,8 @@ def list_places(
         limit=limit,
         offset=offset,
     )
+    result.data_mode = "demo" if request.app.state.demo_mode else "live"
+    return result
 
 
 @router.get(

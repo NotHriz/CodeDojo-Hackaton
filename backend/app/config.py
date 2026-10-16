@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["development", "test", "production"] = "development"
+    demo_data_enabled: bool = False
     allowed_origins: str = "http://localhost:5173"
     database_url: SecretStr = SecretStr("")
     supabase_url: str = ""
@@ -48,6 +49,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_auth(self):
+        if self.demo_data_enabled and self.app_env == "production":
+            raise ValueError("Demo building data is not allowed in production.")
         if self.app_env == "production" and self.supabase_url.startswith("http:"):
             raise ValueError("Production Supabase authentication requires HTTPS.")
         return self

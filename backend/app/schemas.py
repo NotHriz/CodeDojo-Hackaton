@@ -77,6 +77,7 @@ class PlaceDetail(PlaceSummary):
 
 
 class PlaceListResponse(BaseModel):
+    data_mode: Literal["live", "demo"] = "live"
     items: list[PlaceSummary]
     total: int = Field(ge=0)
     limit: int = Field(ge=1, le=100)

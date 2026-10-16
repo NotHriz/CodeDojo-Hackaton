@@ -2,6 +2,8 @@
 
 Status: implemented and tested in the backend on `feat/backend-places`. Frontend/database review is pending. This is a public API proposal, not a prescribed SQL schema. No campus records or persistence adapter are connected yet.
 
+Local testing now supports explicitly enabled fictional records via `DEMO_DATA_ENABLED=true` outside production. List responses add `data_mode` (`live` by default, `demo` when that repository is active); each fictional record also has `is_demo: true`. Demo mode never replaces a real adapter or activates after a database failure. Real campus persistence remains pending.
+
 ## Endpoints
 
 Both endpoints are public and require no authentication.
