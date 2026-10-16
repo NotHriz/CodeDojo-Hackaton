@@ -1,39 +1,39 @@
-# Backend work completed while the team was away
+# Backend integration handoff
 
-These changes are backend/API and integration documentation only. Frontend, Supabase schema/migrations, seed data, `backend/app/models.py`, and `backend/app/database.py` have not been edited.
+Backend/API and integration documentation are implemented. Frontend, Supabase migrations, seed data, `backend/app/models.py`, and `backend/app/database.py` remain with their owners.
 
-## Review order
+## Current verification
 
-1. PR #3, `feat/backend-auth`: Supabase asymmetric access-token verification and `/api/auth/me`.
-2. PR #4, `feat/backend-chat`: bounded DeepSeek search/details tools, source cards, request limits, explicit failures. Initially based on the auth branch.
-3. `feat/backend-community`: authenticated reports/votes, idempotency contracts, separate clearing observations, configurable trust rules. Initially based on the chat branch; see the GitHub PR for its number.
-
-Merge each prerequisite first, retarget the next PR to `main`, then delete the predecessor branch. Nothing has been auto-merged. Source branches form a stack so each PR shows only its feature.
-
-## Verification
-
-- 110 backend tests pass; dependency check passes.
-- Tests use real generated EC/RSA signatures and mocked external providers/test persistence.
-- No paid DeepSeek calls, real Supabase access, deployment, or frontend integration occurred.
-- One existing Starlette test-client HTTPX deprecation warning remains.
+- Earlier authentication, chat, community, explicit local demo, and CI PRs have merged. There is no remaining stacked merge queue.
+- 142 backend tests pass locally; dependency checks pass. One existing Starlette test-client HTTPX deprecation warning remains.
+- Tests use generated EC/RSA signatures, mocked providers, and test repositories. No paid DeepSeek calls, real Supabase access, deployment, or frontend integration occurred during this verification.
+- Review regressions cover mixed search/detail calls, maximum-length answer/history round trips, malformed provider JSON, and report/clearance history transitions.
+- The community test adapter now preserves resolved reports after original-report votes and recomputes status when clearing support changes. This does not demonstrate SQL concurrency or transactional correctness.
 
 ## Database teammate
 
-Start with [building adapter](contracts/places.md), then [community adapter](contracts/community.md). You still own models, database sessions, Supabase schema/policies, and seed/imports. Agree field mappings and implement real transactions/unique keys before connecting writes.
+Start with the [building adapter](contracts/places.md), then the [community adapter](contracts/community.md). You own models, sessions, Supabase schema/policies, and seed/imports. Agree field mappings and implement real transactions/unique keys before connecting writes.
 
-The backend composition root accepts `place_repository` and `community_repository`. All disconnected database features deliberately return 503. No runtime fake campus data was introduced. Building warning fields must be populated from actual unresolved reports.
+The composition root accepts `place_repository` and `community_repository`; credentials alone do not create these adapters. Disconnected features return 503. The explicit development demo supplies fictional buildings only and cannot exercise community persistence. Building warnings must be joined from actual unresolved reports.
+
+Before enabling votes, jointly agree thresholds and how policy/version snapshots are persisted with votes and history. The current `TrustPolicy` has no version field and no active numerical default; this review does not invent either. Reputation learning, expiry/reopening, and collusion resistance remain incomplete.
 
 ## Frontend teammate
 
-Review [places](contracts/places.md), [auth](contracts/auth.md), [chat](contracts/chat.md), and [community](contracts/community.md). Login through Supabase Auth, pass its bearer token for contributions, and reuse an idempotency UUID on submission retries. Render filters/source cards/warnings from structured fields. Treat 401/403/409/422/429/502/503 as explicit UI states; never substitute silent mocks for errors.
+Review [places](contracts/places.md), [auth](contracts/auth.md), [chat](contracts/chat.md), and [community](contracts/community.md). Login through Supabase Auth, pass bearer tokens for contributions, and reuse an idempotency UUID on retries. Render map/list matches from `places` and evidence cards from `sources`; an extra cited detail record can be excluded by the current filters. Retain up to six history messages within the role-specific chat limits.
 
-## Backend owner decisions/setup still needed
+Treat 401/403/409/422/429/502/503 as explicit UI states. Never substitute silent mocks for failures.
 
-- Configure a real Supabase project with ES256/RS256 signing keys and token issuer origin; test real Auth flows.
-- Connect the building and community adapters supplied by the database teammate.
-- Review an experimental trust policy before explicitly activating it. There is no active numerical policy default. Reputation learning, expiry/reopening, and collusion resistance are not claimed complete.
-- Configure the backend-only DeepSeek key and perform a small, deliberate real-provider quality test after records are available.
-- Review process-local request budgets; they reset on restart and are not production abuse protection or spending caps.
-- Deploy on Render, configure Netlify origins/Auth redirects, and rehearse the actual UI/backend/database demo.
+## Pre-demo integration checks
 
-See [backend/README.md](backend/README.md) for local startup and test commands. This is a reviewable backend implementation, not a completed live product.
+`GET /api/health` checks process liveness only. Before declaring the product ready:
+
+1. Connect the building adapter; verify real campus list/details, unknown facilities, and warnings. Declare fictional demo mode if using it.
+2. Test real Supabase sign-in and `/api/auth/me`, plus unsigned and forbidden contribution requests.
+3. With the community adapter and agreed policy, submit a report, retry its idempotency key, and verify one persisted report/history event. Test distinct voters, original-report votes after resolution, and reversed clearing votes using real transactions.
+4. Confirm unresolved reports appear in building warnings and chatbot sources. Verify a corroborated clearance removes the active warning while preserving history.
+5. Run a small deliberate DeepSeek test: matching searches, unknown data, conflicting reports, ambiguous names, and no matches. Source-card validation does not guarantee correct model prose. Verify timeout/provider failure UI states.
+6. Verify client addresses behind the deployed proxy and review process-local budgets. Shared networks can share buckets; restarts reset limits. These are not distributed abuse protection or spending caps.
+7. Configure Render/Netlify origins and Auth redirects, then rehearse the deployed keyboard-accessible map/list/report/chat flow.
+
+See [backend/README.md](backend/README.md) for startup and tests. External integration remains incomplete until these checks pass.

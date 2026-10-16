@@ -18,6 +18,36 @@ class PlaceRepository(Protocol):
     def get_place(self, place_id: str) -> PlaceDetail | None: ...
 
 
+def matches_place(
+    place: PlaceSummary,
+    *,
+    campus_id: str,
+    q: str | None = None,
+    category: str | None = None,
+    step_free_entrance: bool = False,
+    accessible_toilet: bool = False,
+    designated_parking: bool = False,
+) -> bool:
+    """Shared discovery predicate, including revalidation of hydrated chat details."""
+    if place.campus_id != campus_id:
+        return False
+    query = (q or "").strip().casefold()
+    category_query = (category or "").strip().casefold()
+    if query and query not in place.name.casefold():
+        return False
+    if category_query and place.category.casefold() != category_query:
+        return False
+    required = {
+        "step_free_entrance": step_free_entrance,
+        "accessible_toilet": accessible_toilet,
+        "designated_parking": designated_parking,
+    }
+    return all(
+        not enabled or getattr(place.facilities, facility) == FacilityValue.YES
+        for facility, enabled in required.items()
+    )
+
+
 def search_places(
     repository: PlaceRepository,
     *,
@@ -30,25 +60,13 @@ def search_places(
     limit: int,
     offset: int,
 ) -> PlaceListResponse:
-    required = {
-        "step_free_entrance": step_free_entrance,
-        "accessible_toilet": accessible_toilet,
-        "designated_parking": designated_parking,
-    }
-    query = (q or "").strip().casefold()
-    category_query = (category or "").strip().casefold()
     matches = []
     for place in repository.list_places(campus_id):
         # Enforce campus boundaries even if the adapter accidentally over-fetches.
-        if place.campus_id != campus_id:
-            continue
-        if query and query not in place.name.casefold():
-            continue
-        if category_query and place.category.casefold() != category_query:
-            continue
-        if any(
-            enabled and getattr(place.facilities, facility) != FacilityValue.YES
-            for facility, enabled in required.items()
+        if not matches_place(
+            place, campus_id=campus_id, q=q, category=category,
+            step_free_entrance=step_free_entrance, accessible_toilet=accessible_toilet,
+            designated_parking=designated_parking,
         ):
             continue
         matches.append(place)

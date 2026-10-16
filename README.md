@@ -8,7 +8,7 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-**Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. All 118 backend tests pass. Real database adapters, trust-policy activation, provider setup, frontend, and deployment remain pending; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).
+**Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. All 142 backend tests pass. Real database adapters, trust-policy activation, provider setup, frontend, and deployment remain pending; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
@@ -46,13 +46,13 @@ The project uses community verification rather than a dedicated reviewer role. T
 
 See [community verification details](onboarding.md#community-verification-and-trust) for the implementation boundaries.
 
-Route planning, volunteer dispatch, city-wide coverage, and AI accessibility certification are outside the MVP. The chatbot is a planned MVP feature, built on the working place/search API. Conversational report drafting is a stretch feature.
+Route planning, volunteer dispatch, city-wide coverage, and AI accessibility certification are outside the MVP. The backend chatbot is implemented over the working place/search API; frontend and live-service integration remain pending. Conversational report drafting is a stretch feature.
 
 ## AI assistant
 
 The assistant is grounded in campus records and exposes two initial tools: `search_places` and `get_place_details`. It can interpret search requirements, return matching locations, and explain known facilities and active warnings. The frontend displays editable interpreted filters, matching markers, and source cards with observation dates and report status.
 
-The planned flow is `Vue chat panel -> POST /api/chat -> backend-validated tool call -> database query -> answer + cards + map/list updates`. Tool schemas and endpoint schemas are design contracts to finalize during implementation; no chatbot is implemented yet.
+The integration flow is `Vue chat panel -> POST /api/chat -> backend-validated tool call -> database query -> answer + cards + map/list updates`. The backend endpoint and tool schemas are implemented in [the chat contract](contracts/chat.md); frontend review and the real database adapter remain pending.
 
 - The backend allows only explicitly defined tools and validates arguments. The model cannot run arbitrary SQL, vote, change report status, or modify reputation.
 - Answers must distinguish unknown facilities and unverified reports; missing evidence must not become a confident accessibility claim.
@@ -183,7 +183,7 @@ Custom markers, panning, and zooming do not add map loads; recreating the map do
 - Avoid collecting disability histories or requiring precise live location.
 - Send only necessary context to the AI provider, avoid logging sensitive chat content, and ground answers in database evidence.
 
-The backend has 118 passing tests using generated signing keys, explicit test repositories, and mocked providers; dependency checks pass. Real database/provider integration, database concurrency, and complete product workflows have not been tested. Add frontend build, seed, and deployment commands as they become available.
+The backend has 142 passing tests using generated signing keys, explicit test repositories, and mocked providers; dependency checks pass. Real database/provider integration, database concurrency, and complete product workflows have not been tested. Add frontend build, seed, and deployment commands as they become available.
 
 For outages, show accurate component-specific errors, retain unsent form input, and never show failed submissions as successful. A local setup and clearly identified recorded demo are presentation backups; cached records, if used, must display their age. The user reports no submission artifact is required.
 
