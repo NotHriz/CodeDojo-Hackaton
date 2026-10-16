@@ -27,7 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 # Optional: -PostgresBin 'C:\path\to\postgresql\bin' -Port 55440
 ```
 
-The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all nine SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. The SQL suites use fictional records rolled back at completion; seed integration fixtures persist only in the disposable cluster until its server is stopped. Local trust authentication is exclusively for this disposable test cluster.
+The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all ten SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. The SQL suites use fictional records rolled back at completion; seed integration fixtures persist only in the disposable cluster until its server is stopped. Local trust authentication is exclusively for this disposable test cluster.
 
 ## Evidence mapping for the backend adapter
 
@@ -114,7 +114,17 @@ The ninth SQL suite checks active-state/campus scoping, separate zero/unweighted
 
 ## Seed preparation checks
 
-The combined runner also uses `backend/.venv/Scripts/python.exe` to run ten seed validation/CLI tests and generated-import PostgreSQL checks after the nine SQL suites. Install the existing pinned backend dependencies first. See [seed/README.md](../seed/README.md) for the insert-only collection format, dry validation, SQL generation and separately reviewed execution. No additional dependency or schema migration is required. Seed tests deliberately commit only fictional records inside the disposable cluster, test repeat/conflicting imports, then stop the server; they do not access shared Supabase.
+The combined runner also uses `backend/.venv/Scripts/python.exe` to run ten seed validation/CLI tests and generated-import PostgreSQL checks after the ten SQL suites. Install the existing pinned backend dependencies first. See [seed/README.md](../seed/README.md) for the insert-only collection format, dry validation, SQL generation and separately reviewed execution. No additional dependency or schema migration is required. Seed tests deliberately commit only fictional records inside the disposable cluster, test repeat/conflicting imports, then stop the server; they do not access shared Supabase.
+
+## Complete place-detail records
+
+`20261017000300_place_detail_records.sql` adds service-role SELECT-only `place_detail_records` with `id`, `campus_id`, and JSONB `record`. It assembles the existing `PlaceDetail` shape from stored building summaries, independent entrance/observation aggregates, ordered references and `building_active_warnings`. It adds no public API fields and infers no facility or report status.
+
+Order is deterministic: entrances by UUID, observations by recorded time/UUID, references by position, warnings by observed time descending then report UUID. Independent aggregates prevent multiple child lists from duplicating one another. Missing arrays stay empty, missing entrance coordinates and observation metadata stay null, and resolved reports are absent from warnings while their building remains present. Private author/weight/policy/retry fields and internal child IDs/ingestion timestamps are excluded. Invoker security retains underlying grants/RLS and requires PostgreSQL 15+.
+
+The tenth SQL suite checks multiple children without multiplication, empty/null records, ordered evidence, active warnings, facility summaries and role permissions. After seed integration, `verify_place_records.py` validates actual PostgreSQL JSON against the backend DTOs and feeds it through the real search/filter/pagination service, including privacy, unknown values and campus defense. The repository bridge exists only inside that test; a production adapter is not wired.
+
+Backend handoff: query the view by requested identity/campus, validate `record` using `PlaceDetail`, own sessions per request/operation, and propagate real database failures. Current composition remains disconnected until the backend owner agrees dependencies/adapter wiring. No runtime demo/failure behavior changes.
 
 ## Pending handoff
 
