@@ -17,7 +17,7 @@ Read [COLLABORATION.md](COLLABORATION.md) for file ownership, branches, PRs, and
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
 - Akses Campus is the working project name. IIUM Gombak and English-only initial UI are confirmed; exact collection boundaries remain to be chosen.
-- The proposed directory structure is created: frontend folders, backend Python package/module placeholders, seed guidance, environment examples, and `.gitignore` rules. No runnable application, dependency manifests, database schema, or external integration exists yet.
+- The backend foundation now runs: FastAPI app factory, `/api/health` process liveness, `/api/docs`, settings loading, CORS allowlist, and sanitized JSON errors. Runtime/test dependencies are pinned; 14 tests and a dependency check pass. No database connections, building endpoints, identity verification, community voting, or AI integration are implemented. Frontend and database-owned files remain placeholders.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
 - Hosting is agreed: Netlify Free frontend, Render Free Python backend, and Supabase PostgreSQL/Auth/Storage. Accounts, credentials, and deployments are not configured yet.
 - The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Exact schemas remain to be finalized.
@@ -65,7 +65,7 @@ Use Supabase PostgreSQL for the deployed shared prototype and Supabase Storage f
 
 ### Repository structure
 
-These paths exist as a skeleton. Frontend subdirectories contain `.gitkeep` files and backend modules contain documentation-only placeholders. Package initializers are present in `app/`, `routers/`, and `services/`. Component READMEs and `.env.example` files describe responsibilities and proposed configuration; no application startup commands are available yet.
+These paths exist. Frontend subdirectories contain `.gitkeep` files. Backend `main.py`, `config.py`, `schemas.py`, and `routers/health.py` implement the foundation; `models.py` and `database.py` remain database-owned placeholders. Backend manifests and tests are present; see [backend README](backend/README.md) for verified startup commands. Frontend startup tooling is pending.
 
 ```text
 frontend/
@@ -82,11 +82,17 @@ backend/
   app/
     __init__.py
     main.py
+    config.py
     models.py
     schemas.py
     database.py
     routers/          # Places, reports, votes, authenticated identity, chat
     services/         # Vote aggregation, trust rules, report transitions, AI tools
+  requirements.in
+  requirements.txt
+  requirements-dev.txt
+  pytest.ini
+  tests/
 seed/README.md
 supabase/            # Database-owned; migrations directory is currently empty
 contracts/           # Shared interface decisions; backend owner is single editor
@@ -346,7 +352,7 @@ Suggested 24-hour allocation:
 ## Next actions
 
 - Use the confirmed role split and IIUM Gombak pilot; finalize field-collection boundaries and experimental trust/transition rules.
-- Turn the existing directory skeleton into runnable Vue/FastAPI applications, pin dependencies, implement configuration loading, and add verified setup commands to README.md. Environment examples already exist; update them alongside implementation.
+- Frontend owner: scaffold Vue. Backend foundation is runnable; next agree building list/details contracts and database-session integration with the affected teammates before implementing `/api/places`. Environment examples and backend setup commands exist.
 - Configure a restricted Google Maps browser key and map ID; deploy an early map/list prototype.
 - Check the current IIUM accessibility map and reporting process.
 - Seek feedback from a wheelchair user or relevant campus representative through a team-authorized approach.

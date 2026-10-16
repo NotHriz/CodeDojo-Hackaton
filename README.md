@@ -8,7 +8,7 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-**Project structure created; implementation pending.** Frontend directories, Python package/module placeholders, seed documentation, environment examples, and ignore rules are present. There is no runnable application, database schema, dependency manifest, seed dataset, or deployment yet.
+**Backend foundation implemented.** FastAPI runs locally with `/api/health`, `/api/docs`, environment configuration, explicit CORS origins, and sanitized JSON errors. Runtime/test dependencies are pinned and 14 backend tests pass. Frontend, database schema, building endpoints, authentication, community voting, AI, seed data, and deployment are not implemented yet. See [backend startup instructions](backend/README.md#local-development).
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
@@ -91,7 +91,7 @@ Render Free sleeps after 15 minutes without inbound traffic and can take about a
 
 ## Project structure
 
-The directories and backend placeholders below exist. `.gitkeep` files preserve empty frontend folders in Git. Module placeholders contain documentation only; dependencies and application entry points still need implementation.
+The directories below exist. `.gitkeep` files preserve empty frontend folders. The backend now has a runnable entry point, configuration, health router, and tests; database-owned modules remain placeholders.
 
 ```text
 frontend/
@@ -108,11 +108,17 @@ backend/
   app/
     __init__.py
     main.py
+    config.py
     models.py
     schemas.py
     database.py
     routers/__init__.py
     services/__init__.py
+  requirements.in
+  requirements.txt
+  requirements-dev.txt
+  pytest.ini
+  tests/
 seed/README.md
 supabase/
   README.md
@@ -127,7 +133,7 @@ onboarding.md
 
 ## Setup readiness
 
-Installation and startup commands will be added once the scaffold and dependency manifests exist. Do not assume `npm run dev` or a Python entry point is available yet.
+Backend installation, startup, and test commands are available in [backend/README.md](backend/README.md). Frontend tooling has not been scaffolded; no `npm run dev` command is available yet. Health is process liveness only, not database/AI readiness.
 
 See the [frontend skeleton notes](frontend/README.md), [backend skeleton notes](backend/README.md), and [seed-data guidance](seed/README.md). Environment examples are committed; local `.env` files, dependencies, build output, and Python caches are ignored.
 
@@ -173,7 +179,7 @@ Custom markers, panning, and zooming do not add map loads; recreating the map do
 - Avoid collecting disability histories or requiring precise live location.
 - Send only necessary context to the AI provider, avoid logging sensitive chat content, and ground answers in database evidence.
 
-No build or application tests have run because implementation has not started. Add actual build, lint, test, seed, and deployment commands as they become available.
+The backend foundation has 14 passing tests and a passing dependency check. Product workflows and external services have not been implemented or tested. Add frontend build, seed, and deployment commands as they become available.
 
 For outages, show accurate component-specific errors, retain unsent form input, and never show failed submissions as successful. A local setup and clearly identified recorded demo are presentation backups; cached records, if used, must display their age. The user reports no submission artifact is required.
 

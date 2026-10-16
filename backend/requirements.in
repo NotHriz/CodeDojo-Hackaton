@@ -1,0 +1,4 @@
+# Direct runtime dependencies. requirements.txt pins the tested environment.
+fastapi>=0.115,<1
+pydantic-settings>=2.6,<3
+uvicorn>=0.30,<1
