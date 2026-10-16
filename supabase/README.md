@@ -27,7 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 # Optional: -PostgresBin 'C:\path\to\postgresql\bin' -Port 55440
 ```
 
-The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all ten SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. The SQL suites use fictional records rolled back at completion; seed integration fixtures persist only in the disposable cluster until its server is stopped. Local trust authentication is exclusively for this disposable test cluster.
+The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all eleven SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. The SQL suites use fictional records rolled back at completion; seed integration fixtures persist only in the disposable cluster until its server is stopped. Local trust authentication is exclusively for this disposable test cluster.
 
 ## Evidence mapping for the backend adapter
 
@@ -114,7 +114,7 @@ The ninth SQL suite checks active-state/campus scoping, separate zero/unweighted
 
 ## Seed preparation checks
 
-The combined runner also uses `backend/.venv/Scripts/python.exe` to run ten seed validation/CLI tests and generated-import PostgreSQL checks after the ten SQL suites. Install the existing pinned backend dependencies first. See [seed/README.md](../seed/README.md) for the insert-only collection format, dry validation, SQL generation and separately reviewed execution. No additional dependency or schema migration is required. Seed tests deliberately commit only fictional records inside the disposable cluster, test repeat/conflicting imports, then stop the server; they do not access shared Supabase.
+The combined runner also uses `backend/.venv/Scripts/python.exe` to run ten seed validation/CLI tests and generated-import PostgreSQL checks after the eleven SQL suites. Install the existing pinned backend dependencies first. See [seed/README.md](../seed/README.md) for the insert-only collection format, dry validation, SQL generation and separately reviewed execution. No additional dependency or schema migration is required. Seed tests deliberately commit only fictional records inside the disposable cluster, test repeat/conflicting imports, then stop the server; they do not access shared Supabase.
 
 ## Complete place-detail records
 
@@ -125,6 +125,20 @@ Order is deterministic: entrances by UUID, observations by recorded time/UUID, r
 The tenth SQL suite checks multiple children without multiplication, empty/null records, ordered evidence, active warnings, facility summaries and role permissions. After seed integration, `verify_place_records.py` validates actual PostgreSQL JSON against the backend DTOs and feeds it through the real search/filter/pagination service, including privacy, unknown values and campus defense. The repository bridge exists only inside that test; a production adapter is not wired.
 
 Backend handoff: query the view by requested identity/campus, validate `record` using `PlaceDetail`, own sessions per request/operation, and propagate real database failures. Current composition remains disconnected until the backend owner agrees dependencies/adapter wiring. No runtime demo/failure behavior changes.
+
+## Community DTO record views
+
+`20261017000400_community_records.sql` adds three invoker-security, service-role SELECT-only views. The term public refers only to the JSON field sets; browser roles have no access.
+
+- `clearance_public_records`: clearing ID, parent report ID, submission time and `record` matching `ClearanceResponse`, including ordered evidence and separate live member counts.
+- `report_public_records`: report/building/campus identity, submission time and `record` matching `ReportResponse`, including ordered evidence and clearing observations ordered by submission time/UUID. Resolved reports remain available.
+- `report_history_records`: event/report/campus identity, occurrence time, internal sequence and `record` matching `ReportEventResponse`. Counts are captured event values, not today's votes. Sequence is ordering metadata, not a public DTO field.
+
+No private identity, weight, policy, retry or copied clearing chronology fields enter JSON. Child arrays are independently aggregated, zero-vote targets retain zero counts, and missing references remain empty arrays. No status, quorum or reputation is calculated.
+
+Backend adapters must scope by requested target/campus, sort reports newest-first by submission time/UUID and history oldest-first by occurrence time/sequence, and handle pagination/target existence. Empty history is not proof a report is missing. Current response counts/statuses still require consistent mutation transactions; these read projections do not provide that implementation.
+
+The eleventh SQL suite verifies counts/evidence/empty/resolved/history behavior and permissions. `verify_community_records.py` validates actual PostgreSQL records against existing community DTOs and exact field sets inside a rolled-back disposable fixture transaction. The combined runner executes both place/community DTO checks after the seed checks. Production repositories, HTTP integration and shared deployment remain pending.
 
 ## Pending handoff
 
