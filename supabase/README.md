@@ -2,7 +2,7 @@
 
 Owner: teammate 3/database.
 
-The migrations implement campuses, buildings, entrances, facility observations, and ordered photo/evidence references. They follow the IDs, field limits, coordinate ranges, and three `yes`/`no`/`unknown` facility values in [the building contract](../contracts/places.md). No records are seeded. Absent facility information defaults to `unknown`; observation aggregation still needs agreement before live use.
+The migrations implement campuses, buildings, entrances, facility observations, barrier-report creation storage, and ordered photo/evidence references. They follow [the building contract](../contracts/places.md) and the creation fields in [the community contract](../contracts/community.md). No records are seeded. Absent facility information defaults to `unknown`; observation aggregation and community transactions still need implementation before live use.
 
 ## Migration runner
 
@@ -18,7 +18,7 @@ The migration expects the existing Supabase `anon`, `authenticated`, and `servic
 
 ## Access and verification
 
-All six tables enable RLS with no browser policies and revoke table access from public/browser roles. Only the backend service role receives CRUD access; public browsing remains through FastAPI. No frontend credentials, private reliability, or community tables are introduced.
+All eight tables enable RLS with no browser policies and revoke table access from public/browser roles. Only the backend service role receives CRUD access; public browsing remains through FastAPI. Report rows contain private author/retry metadata and must never be exposed directly. No frontend credentials or private reliability records are introduced.
 
 With PostgreSQL 18 installed locally, run from the repository root:
 
@@ -27,7 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 # Optional: -PostgresBin 'C:\path\to\postgresql\bin' -Port 55440
 ```
 
-The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs both SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, and protected parent deletion. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
+The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all three SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped report submission uniqueness, future-time limits, and the three-reference report evidence limit. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
 
 ## Evidence mapping for the backend adapter
 
@@ -42,9 +42,19 @@ No child references means an empty API array. UUIDs/positions/ingestion timestam
 
 Foreign keys use `ON DELETE RESTRICT` to avoid silently erasing recorded evidence when deleting a parent. Any deliberate deletion must handle dependent references explicitly. No trigger updates building facility values, selects the latest observation, or changes report state: recording evidence alone does not establish a current facility or community consensus.
 
+## Barrier-report creation handoff
+
+`20261016000300_barrier_reports.sql` adds `barrier_reports` and `barrier_report_evidence`. Report identity is a UUID; `building_id` maps to API `place_id`, and campus identity comes from the referenced building. Observation and submission timestamps are distinct and finite; the database allows observation time at most five minutes after submission. New rows default to `unverified`. All four backend status names are supported for future backend-derived transitions; no policy or transition trigger is activated here.
+
+Private fields are `author_id`, `idempotency_key`, and `payload_digest`. Author identity must come from verified Supabase authentication, never request JSON. There is no user/profile table or Auth deletion cascade in this slice; identity verification and transactional restriction checks remain adapter responsibilities. The digest must be 64 lowercase hexadecimal characters representing a backend-computed SHA-256 digest of normalized user payload, excluding server submission time. This migration checks its format, not its correctness.
+
+Uniqueness is `(author_id, building_id, idempotency_key)`: the operation is implicitly create-report and the target is the building. Different actors/targets may reuse a key. This is a concurrency-safe database uniqueness primitive, not a completed retry implementation. The adapter must atomically compare digests on conflict, return the original unchanged record for identical content, raise `IdempotencyConflict` for changed content, and insert report/evidence/history in one transaction after checking eligibility/campus. Audit-event persistence and these transactions remain pending, so do not wire the community API yet.
+
+Read evidence by `position` into `evidence_urls`. Slots 0–2 permit at most three references per report. Full URL validation and public/scoped-reference checks still belong to the backend DTO/adapter. For future place warnings, map only unresolved report statuses; do not leak author identity, retry keys, or payload digests. The migration does not change current place responses.
+
 ## Pending handoff
 
-Community persistence, observation aggregation, Storage/Auth policies, and seed import remain incomplete. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. `backend/app/models.py` and `backend/app/database.py` remain placeholders. Coordinate SQLModel/PostgreSQL dependency additions with the backend owner before implementing their models/session API, then agree the adapter location and wire it through `create_app(place_repository=...)`. Existing endpoints and demo behavior are unchanged. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
+Votes, clearing observations, audit history, contributor restrictions, complete community transactions, observation aggregation, Storage/Auth policies, and seed import remain incomplete. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. `backend/app/models.py` and `backend/app/database.py` remain placeholders. Coordinate SQLModel/PostgreSQL dependency additions with the backend owner before implementing their models/session API, then agree the adapter location and wire it through `create_app(place_repository=...)`. Existing endpoints and demo behavior are unchanged. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
 
 The database owner also owns `backend/app/models.py`, `backend/app/database.py`, and `seed/`. The backend owner owns API schemas and service logic; agree fields and session interfaces before either side implements them.
 
