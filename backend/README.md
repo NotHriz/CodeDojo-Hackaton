@@ -26,6 +26,8 @@ Liveness returns `{"status":"ok","service":"akses-campus-api"}`. This proves onl
 
 ## Tests
 
+GitHub Actions runs the backend suite on every pull request, pushes to `main`, and manual dispatch. The `Python 3.12 backend tests` job installs both pinned runtime/test manifests, checks dependency compatibility, runs pytest on Ubuntu, and uploads a `backend-test-results` JUnit artifact for seven days. No Supabase or DeepSeek secrets are supplied, and tests use generated keys and mocked providers. This does not replace real database/provider integration testing or human review.
+
 From the repository root:
 
 ```powershell
@@ -33,6 +35,8 @@ backend/.venv/Scripts/python.exe -m pip install -r backend/requirements-dev.txt
 Set-Location backend
 .venv/Scripts/python.exe -m pytest
 ```
+
+To generate the same report locally from `backend`, run `.venv/Scripts/python.exe -m pytest -q --junitxml=test-results.xml`. The report is ignored by Git. Workflow definition: [backend.yml](../.github/workflows/backend.yml).
 
 All 118 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
 

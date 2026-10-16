@@ -16,6 +16,8 @@ For chatbot testing before Supabase is connected, use the explicitly enabled [lo
 
 Read [COLLABORATION.md](COLLABORATION.md) before editing: teammate 1 owns `frontend/`; the user owns backend/API and integration; teammate 3 owns `supabase/`, `seed/`, and backend database/model modules. Use task branches and small PRs. [AGENTS.md](AGENTS.md) applies the same ownership boundaries to coding agents. Shared interface decisions belong in [contracts/](contracts/README.md).
 
+PR verification: [Backend tests](.github/workflows/backend.yml) runs the Python 3.12 suite and dependency checks without external-service secrets. Review the `Python 3.12 backend tests` check and downloadable JUnit results before merging. Branch protection and automatic merging are not configured by this workflow.
+
 ## Planned MVP
 
 - Explore approximately 10–15 campus buildings using a Google map or accessible list, with specific entrance details inside each building record.
