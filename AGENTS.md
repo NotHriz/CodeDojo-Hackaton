@@ -15,6 +15,8 @@ Use the role explicitly assigned in the task. If none is assigned, infer it from
 
 Read any area to understand dependencies. When a fix needs another owner's files, describe the concrete needed change and request a scoped handoff; continue independent work within scope. Do not silently rewrite other areas, dependency manifests, generated lockfiles, or shared contracts.
 
+The database owner also maintains root [DATABASE_HANDOFF.md](DATABASE_HANDOFF.md), an explicit user-authorized documentation handoff. Read it before database work and update it in each database task/PR that changes schema, models/sessions, adapters, seeds, policies, verification, or deployment readiness. Distinguish pending PRs, merged code, local tests, and shared deployment; include remaining backend dependencies. This standing scope covers that handoff file only, alongside the database paths above.
+
 ## Worktree and Git discipline
 
 - Inspect Git status before editing. Preserve existing user/teammate changes; never discard or overwrite them to obtain a clean workspace.

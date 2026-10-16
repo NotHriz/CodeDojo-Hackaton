@@ -2,6 +2,8 @@
 
 Owner: teammate 3/database.
 
+Start with [DATABASE_HANDOFF.md](../DATABASE_HANDOFF.md) for merged/pending status, verification limits, and backend integration order. The database owner updates that handoff with each relevant database task/PR; the field mappings below remain the detailed schema reference.
+
 The migrations implement campuses, buildings, entrances, facility observations, barrier-report creation and vote storage, clearing-observation creation storage, and ordered photo/evidence references. They follow [the building contract](../contracts/places.md) and [the community contract](../contracts/community.md). No records are seeded. Absent facility information defaults to `unknown`; observation aggregation and community transactions still need implementation before live use.
 
 ## Migration runner
