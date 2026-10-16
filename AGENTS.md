@@ -29,7 +29,7 @@ Read any area to understand dependencies. When a fix needs another owner's files
 - Follow `contracts/` when implemented contracts exist. Its current README is a checklist, not a finalized API specification.
 - Do not guess shared field names, enum values, identity/session interfaces, or community trust thresholds independently across layers.
 - Report cross-area dependencies and changed interfaces in the task/PR handoff. Keep tests within the relevant area unless a cross-area change is assigned.
-- Run checks appropriate to the change; report what actually ran. The current skeleton has no runnable application or dependency manifests.
+- Run checks appropriate to the change; report what actually ran. The backend foundation is runnable with pinned dependencies and tests; see `backend/README.md`. Frontend and database modules are still pending implementation.
 - Keep documentation accurate about placeholders versus implemented functionality.
 - Public browsing is allowed; reporting/voting requires authenticated identity. Private reliability and backend secrets must never leak into public responses or frontend bundles.
 - Never substitute fake data or canned accessibility answers for an AI/API failure in the live application.
