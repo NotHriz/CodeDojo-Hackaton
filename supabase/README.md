@@ -18,7 +18,7 @@ The migration expects the existing Supabase `anon`, `authenticated`, and `servic
 
 ## Access and verification
 
-All thirteen tables enable RLS with no browser policies and revoke table access from public/browser roles. The backend service role receives CRUD on existing records and only SELECT/INSERT on audit events; public browsing remains through FastAPI. Reports/clearing observations contain private author/retry metadata and votes/history contain private identities/weights; these rows must not be exposed directly. No frontend credentials or private contributor reliability records are introduced.
+All fourteen tables enable RLS with no browser policies and revoke table access from public/browser roles. The backend service role receives CRUD on existing records, SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state; public browsing remains through FastAPI. Reports/clearing observations contain private author/retry metadata and votes/history contain private identities/weights; these rows must not be exposed directly. No frontend credentials or learned reputation scores are introduced; contributor eligibility and voting weights remain private.
 
 With PostgreSQL 18 installed locally, run from the repository root:
 
@@ -27,7 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 # Optional: -PostgresBin 'C:\path\to\postgresql\bin' -Port 55440
 ```
 
-The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all seven SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
+The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all eight SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
 
 ## Evidence mapping for the backend adapter
 
@@ -88,9 +88,19 @@ The service role can SELECT/INSERT events and use the identity sequence, but can
 
 The seventh SQL suite checks all four action shapes, historical snapshots, equal-time ordering, duplicate creation events, wrong-parent references, invalid snapshots, application append-only access, privacy/RLS, and rollback of an event in a failing SQL subtransaction. This does not test the pending real adapter or simultaneous transactions.
 
+## Contributor-state storage handoff
+
+`20261017000100_contributor_state.sql` adds private `contributor_state` keyed by `user_id` (verified Supabase UUID). New rows default to eligible with neutral weight 1. Stored weights are bounded to [1, 2]; a configured policy may impose a lower cap through the existing backend `eligible_weight` function. Missing rows retain the existing backend neutral default and are not automatically seeded.
+
+`can_contribute=false` requires a non-space `restriction_reason`. Restoring eligibility requires clearing that reason explicitly. Map only eligibility/weight into the internal `ContributorState`; never expose this table or its reasons/timestamps as a public profile. No public restriction-explanation interface is defined by this migration. API identity verification is still required; this is not an Auth user table or credential store.
+
+The backend service role may SELECT/INSERT/UPDATE state, but cannot DELETE/TRUNCATE it. Explicitly restore eligibility instead of deleting restrictions into the missing-row default. State updates must refresh `updated_at`; no timestamp trigger or automatic expiry is installed. Restriction administration, change history and recovery rules remain pending. No automatic score learning, consensus-based punishment, or rewriting of previously accepted votes occurs.
+
+Before enabling community writes, the adapter must recheck eligibility inside each mutation transaction under a coordinated lock, including races involving a previously missing contributor row. This schema is storage only; it does not authorize an operation or complete concurrent restriction enforcement. The eighth SQL suite checks neutral defaults, bounds, explicit disable/restore, denied application deletion and browser read/write denial.
+
 ## Pending handoff
 
-Audit transaction wiring, contributor restrictions, complete community transactions, observation aggregation, Storage/Auth policies, and seed import remain incomplete. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. `backend/app/models.py` and `backend/app/database.py` remain placeholders. Coordinate SQLModel/PostgreSQL dependency additions with the backend owner before implementing their models/session API, then agree the adapter location and wire it through `create_app(place_repository=...)`. Existing endpoints and demo behavior are unchanged. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
+Audit/contributor-state transaction wiring, restriction administration/history, complete community transactions, observation aggregation, Storage/Auth policies, and seed import remain incomplete. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. `backend/app/models.py` and `backend/app/database.py` remain placeholders. Coordinate SQLModel/PostgreSQL dependency additions with the backend owner before implementing their models/session API, then agree the adapter location and wire it through `create_app(place_repository=...)`. Existing endpoints and demo behavior are unchanged. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
 
 The database owner also owns `backend/app/models.py`, `backend/app/database.py`, and `seed/`. The backend owner owns API schemas and service logic; agree fields and session interfaces before either side implements them.
 
