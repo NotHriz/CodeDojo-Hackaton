@@ -6,9 +6,9 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
-Eight PostgreSQL migrations are merged through [PR #19](https://github.com/NotHriz/CodeDojo-Hackaton/pull/19). They provide fourteen backend-only tables. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
+Nine PostgreSQL migrations are merged through [PR #20](https://github.com/NotHriz/CodeDojo-Hackaton/pull/20). They provide fourteen backend-only tables and three backend-only views. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
 
-The proposed `feat/database-community-read-views` change adds a ninth migration with three backend-only read views and no new tables. It awaits review and is not merged or deployed. Contributor-state PR #19 is merged.
+The proposed `feat/database-seed-import` change adds an offline collection validator, transactional insert-only SQL generator, and unit/CLI/PostgreSQL import checks. It awaits review and is not merged or deployed; no new schema migration or shared import is included. Read-view PR #20 is merged.
 
 `backend/app/models.py` and `backend/app/database.py` remain placeholders. No real place/community repository is connected. Database credentials alone do not create an adapter. No trust policy or observation aggregation rule is activated, and no SQL trigger derives report status.
 
@@ -26,7 +26,7 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261016000600_clearance_votes.sql` | Unique member/clearing votes, actual parent/author membership, private snapshots | Merged, PR #16 |
 | `20261016000700_report_history.sql` | Application append-only audit events, public status/count and private vote snapshots | Merged, PR #18 |
 | `20261017000100_contributor_state.sql` | Private current eligibility, neutral/bounded weight, explicit restriction reason | Merged, PR #19 |
-| `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Proposed on task branch; not merged |
+| `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Merged, PR #20 |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 
@@ -69,7 +69,7 @@ This slice stores current state only. It adds no restriction administration endp
 
 ## Community read-view handoff
 
-The proposed ninth migration adds `building_active_warnings`, `report_community_counts` and `clearance_community_counts`. Only the service role receives SELECT. All three views use invoker security, retaining underlying table permissions/RLS rather than borrowing the view owner's privileges. They require PostgreSQL 15+; validation used PostgreSQL 18. Verify the actual shared-project version before deployment.
+The ninth migration adds `building_active_warnings`, `report_community_counts` and `clearance_community_counts`. Only the service role receives SELECT. All three views use invoker security, retaining underlying table permissions/RLS rather than borrowing the view owner's privileges. They require PostgreSQL 15+; validation used PostgreSQL 18. Verify the actual shared-project version before deployment.
 
 The warning view exposes building/campus identity plus the existing warning fields for unverified, community-corroborated and disputed reports; resolved reports are excluded. Adapters must scope by requested building/campus and serialize the UUID report ID to the existing public string field. These queries do not drop a building that matches facility filters or overwrite its facility summaries.
 
@@ -77,9 +77,19 @@ Counts include zero-vote reports/clearing observations, count each unique voter 
 
 View columns exclude author/voter IDs, weights, policy metadata, restriction state and retry secrets. This is backend query preparation, not direct browser access or completed API wiring. The ninth suite verifies approved columns, campus/warning scoping, zero/unweighted counts, separate targets, changed votes/statuses, service-role read-only grants, and browser denial even if SELECT on one view is accidentally granted without underlying table access.
 
+## Seed preparation handoff
+
+The local `seed/import_places.py` validates collection JSON against backend field constraints and generates an explicit insert-only SQL transaction. The default CLI validates only; `--sql` prints a plan without connecting to a database. No new dependency, backend manifest change, SQLModel replacement, API shape, or schema migration is introduced.
+
+See [seed/README.md](seed/README.md) for input format, stable identity requirements and commands. The self-contained batch lists campuses/buildings plus optional entrances/observations and ordered references. Unknown/private/demo fields, duplicate IDs/JSON keys, invalid references/values, non-timezone dates, nonfinite JSON and NUL are rejected. Unknown facilities and missing entrance coordinates/dates stay unknown/null; no actual campus observations are invented.
+
+Generated imports accept identical records, insert missing records, and roll back the full batch on conflicting values for an existing identity. They do not UPDATE/DELETE existing rows, remove omitted references, or target community/private tables. Corrections and any real/shared execution need a separately reviewed task. Source authenticity and permission to publish evidence remain human collection responsibilities; this tool validates structure, not accessibility truth.
+
+The combined disposable runner tests repeat imports, literal quotes/backslashes/dollar delimiters/Unicode, null/unknown defaults, retained community reports, and whole-batch rollback including evidence conflicts. Tests contain fictional fixtures only. Import preparation is not a runtime demo/outage fallback and does not connect the live repositories.
+
 ## Verification and limits
 
-The most recent database execution tested the local working tree on `feat/database-community-read-views`: all nine PostgreSQL 18 SQL suites passed in a disposable loopback-only cluster. All nine migrations applied transactionally; test records were rolled back and the server stopped. Eight suites/migrations are merged; read views are local work awaiting review. The initial new-suite run had an incorrect expected error for a non-updatable join view; that assertion was corrected and explicit service-role write-grant checks added before the successful rerun.
+The most recent execution tested the local working tree on `feat/database-seed-import`: all nine PostgreSQL 18 SQL suites, ten seed unit/CLI tests, and generated-import PostgreSQL checks passed. All nine merged migrations applied transactionally. SQL-suite fixtures rolled back; seed fixtures were committed only inside the disposable loopback cluster, and its server stopped afterward. No shared data was touched. The combined runner now also requires the existing backend Python environment.
 
 Run from the repository root on Windows with PostgreSQL 18 installed:
 
@@ -93,10 +103,10 @@ Coverage includes defaults, constraints, coordinate bounds, evidence ordering/li
 
 ## Remaining acceptance checks
 
-- Implement eligibility checks/event writes through the real adapter and integrate read views after review. Agree restriction administration/history, recovery, freshness/reopening and trust-version rules before implementing unagreed behavior.
+- Implement eligibility checks/event writes and the accepted read views through the real adapter. Agree restriction administration/history, recovery, freshness/reopening and trust-version rules before implementing unagreed behavior.
 - Connect real read/write adapters and verify competing/retried submissions produce one record/event, changed payload conflicts, and vote/status/history changes commit or roll back together.
 - Test public-field privacy and active warnings through places, reports and chat; confirm clearing support changes recalculate parent status without erasing earlier evidence.
-- Build a repeatable seed/import process using actual collected observations. Keep any fictional fixtures explicit and separate. Never turn fixtures into an outage fallback.
+- Review/integrate seed preparation tooling and obtain actual collected observations. Review and apply generated SQL as a separate database-owner task. Keep fictional tests separate; never turn them into an outage fallback.
 - Configure and verify Supabase access/Storage policies, migration history, shared deployment and persistence across backend restarts. No shared reset or deployment is authorized by this handoff.
 
 See [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) for backend readiness and [COLLABORATION.md](COLLABORATION.md) for ownership and PR coordination.
