@@ -21,7 +21,9 @@ try {
     foreach ($migration in (Get-ChildItem (Join-Path $PSScriptRoot '../migrations/*.sql') | Sort-Object Name)) {
         Invoke-PostgresTool 'psql' ($connectionArgs + @('--single-transaction', '-f', $migration.FullName))
     }
-    Invoke-PostgresTool 'psql' ($connectionArgs + @('-f', (Join-Path $PSScriptRoot 'building_foundation.sql')))
+    foreach ($checkFile in @('building_foundation.sql', 'place_evidence.sql')) {
+        Invoke-PostgresTool 'psql' ($connectionArgs + @('-f', (Join-Path $PSScriptRoot $checkFile)))
+    }
 } finally {
     if ($started) {
         Invoke-PostgresTool 'pg_ctl' @('-D', $clusterPath, '-m', 'fast', '-w', 'stop')
