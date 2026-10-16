@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,31 @@ class Settings(BaseSettings):
     supabase_service_role_key: SecretStr = SecretStr("")
     ai_api_key: SecretStr = SecretStr("")
     ai_model: str = "deepseek-flash"
+
+    @field_validator("supabase_url")
+    @classmethod
+    def validate_supabase_url(cls, value: str) -> str:
+        if not value:
+            return value
+        parts = urlsplit(value)
+        if (
+            not parts.hostname
+            or parts.scheme not in {"https", "http"}
+            or (parts.scheme == "http" and parts.hostname not in {"localhost", "127.0.0.1", "::1"})
+            or parts.username is not None
+            or parts.password is not None
+            or parts.path not in {"", "/"}
+            or parts.query
+            or parts.fragment
+        ):
+            raise ValueError("SUPABASE_URL must be an HTTPS project origin (local HTTP is development-only).")
+        return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def validate_production_auth(self):
+        if self.app_env == "production" and self.supabase_url.startswith("http:"):
+            raise ValueError("Production Supabase authentication requires HTTPS.")
+        return self
 
     @field_validator("allowed_origins")
     @classmethod

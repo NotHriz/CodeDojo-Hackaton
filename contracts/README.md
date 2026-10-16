@@ -6,6 +6,8 @@ This directory holds versioned API examples and shared interface decisions. [Bui
 
 Agree the first building list/details slice before three teammates implement incompatible shapes. For each slice, record:
 
+Authentication: [Supabase bearer verification](auth.md) implements `/api/auth/me` and documents frontend sign-in and signing-key requirements.
+
 1. Endpoint method/path, authentication, parameters, and example success/error JSON.
 2. IDs, facility values, report statuses, nullability, and date formats.
 3. Data fields owned by the database and public fields exposed by the backend.
