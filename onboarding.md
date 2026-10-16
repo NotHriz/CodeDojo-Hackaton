@@ -4,9 +4,9 @@ Last updated: 16 October 2026 (Asia/Kuala_Lumpur)
 
 ## Start here
 
-Akses Campus is the current working direction for a three-person, 24-hour community hackathon project. It focuses on wheelchair accessibility information around a single campus, initially proposed as IIUM.
+Akses Campus is the current working direction for a three-person, 24-hour community hackathon project. The confirmed pilot is IIUM Gombak, initially in English. The PWD track is broad; the initial user journey focuses on wheelchair access to campus buildings. Future campuses should be supported by the data model without expanding the current pilot scope.
 
-**Pitch:** Help students check campus accessibility conditions before visiting, using facility-level evidence, recent community reports, and a review-and-resolution workflow.
+**Pitch:** Help students check campus accessibility conditions before visiting, using facility-level evidence, an AI assistant, and community reports with corroboration and resolution history.
 
 Read this file before planning or implementing features. It records the discussion so teammates and future agents can continue without reconstructing the chat. The user's latest instructions and any applicable `AGENTS.md` take precedence.
 
@@ -14,11 +14,15 @@ Read this file before planning or implementing features. It records the discussi
 
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
-- Akses Campus and IIUM are working project name and pilot location, respectively; branding and pilot boundaries can change.
+- Akses Campus is the working project name. IIUM Gombak and English-only initial UI are confirmed; exact collection boundaries remain to be chosen.
 - No application has been implemented yet. The repository currently contains project documentation and an empty `.gitignore`; no application scaffold or dependency manifests exist.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
-- Hosting and object-storage providers, credentials, pilot boundaries, and named team assignments remain open. The stack is documented as a build plan, not installed or deployed software.
-- The user requested an AI chatbot as a planned project feature. Search and place questions are in MVP scope; conversational report drafting remains a stretch feature. The provider/model and exact schemas have not been supplied or selected.
+- Hosting is agreed: Netlify Free frontend, Render Free Python backend, and Supabase PostgreSQL/Auth/Storage. Accounts, credentials, and deployments are not configured yet.
+- The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Exact schemas remain to be finalized.
+- Public browsing and signed-in reporting/voting are confirmed. Community voting replaces the previous dedicated reviewer design. Internal reliability scores influence bounded vote weights; the algorithm remains experimental and must be specified before coding.
+- The team will collect initial building observations by walking around campus. No intended-user interviews have happened yet.
+- Team ownership is confirmed by function: teammate 1 frontend, the user primarily backend, teammate 3 database. Names remain unspecified.
+- The user reports no submission artifact is required. The project still needs a rehearsed demo and pitch; pitch duration and event deadline remain unspecified.
 - The MVP, role split, and schedule below are recommendations from the planning discussion, not completed work.
 - Campus data coverage, access to intended users, and the current state of IIUM's existing accessibility map remain unverified.
 
@@ -26,14 +30,16 @@ Read this file before planning or implementing features. It records the discussi
 
 | Layer | Baseline | Responsibility |
 | --- | --- | --- |
-| Frontend | Vue 3, Vite, JavaScript, Vue Router | Map/list browsing, filters, place details, report forms, reviewer view |
+| Frontend | Vue 3, Vite, JavaScript, Vue Router | Map/list browsing, filters, details, chat, report forms, community voting |
 | Styling | Tailwind CSS with its Vite plugin | Responsive layout, consistent components, visible interaction states |
 | Maps | Google Maps JavaScript API with Advanced Markers | Base map and custom facility/barrier markers |
 | Backend | Python, FastAPI, Pydantic | Input validation, queries, authentication, and report lifecycle |
 | Database access | SQLModel | Python models and database queries |
-| Database | PostgreSQL | Shared persistent places, observations, reports, reviewer accounts, and history |
-| Photos | Object storage, provider undecided | Image files; store references and metadata in PostgreSQL |
-| AI assistant | Provider/model undecided, backend-only tool calling | Search campus records, explain evidence, and return structured map/list results |
+| Database | Supabase PostgreSQL | Campuses, buildings, observations, reports, votes, private reliability records, and history |
+| Authentication | Supabase Auth | Sign-in for contributors; backend validates identity and restrictions |
+| Photos | Supabase Storage | Image files; references and metadata in PostgreSQL |
+| AI assistant | DeepSeek, recommended `deepseek-flash`, non-thinking mode | Search records, explain evidence, and return structured map/list results |
+| Hosting | Netlify Free frontend, Render Free backend | Separate deployments from one repository |
 
 Use JavaScript unless the team explicitly chooses TypeScript. Start with Vue composables for shared state. Introduce additional libraries only when they resolve an actual need.
 
@@ -43,16 +49,17 @@ Use a single repository and one Python backend, organized into feature modules. 
 
 ```mermaid
 flowchart TD
-    Vue[Vue and Tailwind in browser] -->|Map display| Maps[Google Maps API]
-    Vue -->|Application requests| API[FastAPI /api]
-    API --> DB[(PostgreSQL)]
-    API --> Photos[Object storage]
-    API -->|Validated tool calling| AI[AI service]
+    Vue[Vue on Netlify] -->|Map display| Maps[Google Maps API]
+    Vue -->|Sign-in| Auth[Supabase Auth]
+    Vue -->|Application requests| API[FastAPI on Render]
+    API --> DB[(Supabase PostgreSQL)]
+    API --> Photos[Supabase Storage]
+    API -->|Validated tool calling| AI[DeepSeek]
 ```
 
-Development: run Vite and FastAPI separately, with Vite proxying `/api` to FastAPI. Production plan: build Vue, serve its assets through the FastAPI service, and expose one public origin. Register `/api` routes before a frontend fallback; missing API routes must return API errors rather than HTML. Client-side routes need an SPA fallback. Hosting selection remains open.
+Development: run Vite and FastAPI separately, with Vite proxying `/api` to FastAPI. Production: Netlify serves the Vue build; Render serves FastAPI. Configure `VITE_API_BASE_URL` and an explicit backend CORS allowlist. Configure Supabase Auth redirect URLs for actual frontend origins. Netlify needs a client-side route fallback; API failures must not become frontend HTML responses. This replaces the earlier single-origin FastAPI-hosted frontend plan. Netlify Functions will not host Python.
 
-Use managed PostgreSQL for the deployed shared prototype. SQLite is an optional local fallback only when the team needs it; a deployed SQLite database would require persistent disk and a single-instance deployment plan. Verify that reports survive application restarts on the chosen host.
+Use Supabase PostgreSQL for the deployed shared prototype and Supabase Storage for photos. Do not store persistent data on Render Free's ephemeral filesystem. SQLite is a local development fallback only. Verify that reports survive backend restarts. Render Free sleeps after 15 minutes without inbound traffic and can take about a minute to wake; rehearse and check health before presenting. Supabase Free can pause inactive projects; check provider allowances before the event. References: [Render Free](https://render.com/docs/free), [Supabase pricing](https://supabase.com/pricing), [Netlify Functions](https://docs.netlify.com/build/functions/overview/).
 
 ### Planned repository structure
 
@@ -62,7 +69,7 @@ These paths are proposed and do not exist yet.
 frontend/
   src/
     components/       # Map, markers, filters, bottom sheet
-    views/            # Explore, reports, reviewer screen
+    views/            # Explore, reports, sign-in, community
     composables/      # Shared reactive state and logic
     services/         # API client
 backend/
@@ -71,8 +78,8 @@ backend/
     models.py
     schemas.py
     database.py
-    routers/          # Places, reports, authentication, chat
-    services/         # Report transitions, AI orchestration and tool handlers
+    routers/          # Places, reports, votes, authenticated identity, chat
+    services/         # Vote aggregation, trust rules, report transitions, AI tools
 seed/
 README.md
 onboarding.md
@@ -84,20 +91,20 @@ onboarding.md
 | --- | --- | --- |
 | `GET /api/places` | List places with facility filters | Public |
 | `GET /api/places/{id}` | Details, observations, evidence, and active warnings | Public |
-| `POST /api/reports` | Submit an unverified report | Public, with validation and abuse controls |
-| `PATCH /api/reports/{id}/status` | Confirm, reject, or resolve a report and append history | Authenticated reviewer |
-| `POST /api/auth/login` | Authenticate a reviewer | Valid reviewer credentials |
+| `POST /api/reports` | Submit an unverified report | Signed-in contributor, with validation and abuse controls |
+| `POST /api/reports/{id}/votes` | Record/update one member's corroborating or disputing vote | Signed-in eligible member; no self-vote |
+| `POST /api/reports/{id}/clearance-observations` | Record that a barrier appears cleared, with evidence | Signed-in contributor; resolution requires community aggregation |
 | `POST /api/chat` | Interpret a campus question and return grounded answers, cards, and map/list actions | Public, with request limits |
 
-Agree request/response schemas before splitting implementation. A required facility filter matches `yes`, not `unknown`. Enforce allowed status transitions and reviewer authorization on the backend. Record the status change and history entry in one transaction.
+Agree request/response schemas before splitting implementation. A required facility filter matches `yes`, not `unknown`. Keep matching buildings visible with active warnings. Enforce vote eligibility and status rules on the backend; clients cannot directly set report status or reliability. Record votes, aggregation changes, and history consistently in database transactions.
 
-The reviewer-auth implementation remains to be selected. Use hashed passwords and backend-validated sessions or tokens; never ship reviewer secrets in frontend code. If using cookies, configure secure cookie handling and CSRF protection for mutations as appropriate to the deployment.
+Use Supabase Auth for account sign-in. FastAPI must validate token signature, issuer, audience, expiry, and account identity using supported Supabase verification methods; never trust a client-supplied user ID or decode a token without verification. Store reputation outside publicly readable profiles and restrict database/storage access appropriately. Supabase's publishable key can be in frontend configuration; database credentials and service-role keys cannot.
 
 ## Google Maps integration and UI reference
 
 The user supplied a Toilet Finder screenshot as a layout reference: a full map, custom markers, selected marker emphasis, a bottom detail sheet, search/location controls, a list toggle, and bottom navigation. Adapt the interaction pattern to Akses with original assets and facility/report content.
 
-- Render our stored latitude/longitude records as Advanced Markers. Selecting a marker and selecting its list item must open the same place details.
+- Render one primary marker per building. Keep entrance location/side, photos, and optional entrance coordinates inside building details. Selecting a marker and its list item must open the same details; a building-centre marker alone must not imply an accessible entrance there.
 - Store observations and reports in our database. Markers do not automatically publish listings or reports to public Google Maps.
 - Preserve Google attribution and keep controls clear of it. Provide icons plus labels and an accessible list alternative.
 - Configure a Google Cloud billing account, enable Maps JavaScript API, create a browser API key, and configure a map ID for Advanced Markers.
@@ -115,7 +122,7 @@ A wheelchair user planning a campus visit needs to know whether a destination me
 
 Example question: **“Where can I study nearby with a step-free entrance and an accessible toilet?”**
 
-Primary users are students who use wheelchairs. Contributors may include other students and campus volunteers. A reviewer role can represent campus staff or a project moderator in the prototype; no actual university partnership or integration is established.
+Primary users for the initial journey are students and visitors who use wheelchairs. Contributors are signed-in community members. Community corroboration replaces dedicated reviewers; no university partnership or authority integration is established. The team has not interviewed intended users, so assumptions remain to validate.
 
 Focus on information and reporting. The application cannot remove physical barriers or guarantee that a visit will be possible.
 
@@ -134,16 +141,24 @@ UI/UX, execution, and pitching together represent 60%. Prioritize a polished wor
 
 ## MVP scope
 
-Build one campus area with approximately 10–15 seeded locations, such as libraries, study spaces, cafés, and campus buildings.
+Build an IIUM Gombak pilot with approximately 10–15 building records, collected by the team on campus. Prioritize the task of finding a suitable study destination. Label any fictional demo records separately from real observations.
 
 1. **Browse:** Show locations on a map and in an accessible list.
 2. **Filter:** Support step-free entrance, accessible toilet, and designated parking.
 3. **Inspect:** Show specific facility observations, photos when available, information source, and last checked date.
 4. **Report:** Let a contributor submit a temporary barrier or outdated-information report.
-5. **Review and resolve:** Let a reviewer confirm, reject, or resolve a report, with visible status history.
+5. **Corroborate and resolve:** Let signed-in members submit weighted community votes and clearing observations, with derived status and visible history.
 6. **Ask the assistant:** Search campus records conversationally and ask place-specific questions, with source cards and synchronized map/list results.
 
-The reporting workflow is the proposed differentiator and main demo moment. If time becomes tight, simplify map interactions and visual extras before removing the complete report lifecycle.
+The community reporting workflow and data-grounded assistant are the proposed demo strengths. If time becomes tight, simplify map interactions and visual extras before removing the complete report lifecycle.
+
+### Facility collection definitions
+
+- **Step-free entrance:** record observed steps/barriers and the specific entrance side/location, photo, and check date. Record lift dependency if access to the destination needs one.
+- **Accessible toilet:** record floor/location, signage and observed features, evidence, and date. Signage alone does not establish formal compliance or universal suitability.
+- **Designated parking:** record marked spaces, location, and the observed connection toward the entrance; keep unobserved details unknown.
+- All fields support yes/no/unknown; observations are not formal certification. Never infer unknown features from photographs without an actual checked observation.
+- Active warnings do not remove a building matching its recorded facility filters. Show warnings prominently in cards, details, and AI answers.
 
 ### Explicitly outside the initial MVP
 
@@ -152,7 +167,24 @@ The reporting workflow is the proposed differentiator and main demo moment. If t
 - City-wide coverage or a complete solution for every disability group.
 - Automatic accessibility certification from photos or AI.
 - University systems integration, unless access is actually obtained.
-- Complex reputation systems, gamification, or social networking.
+- Advanced fraud detection/ML, social networking, and gamification. A small configurable community-trust algorithm is in scope.
+
+### Community verification and trust
+
+The user wants a Waze-like, community-based system with internal reliability scores and greater voting weight for trusted contributors. The following are recommended implementation boundaries; numeric thresholds, bootstrap rules, and scoring updates remain to be finalized before coding.
+
+- Public browsing; Supabase sign-in required for reports and votes. Require distinct authenticated voters, a unique user/report vote, and no self-voting.
+- Give new accounts neutral weight, a short reporting guide, and conservative contribution limits. Do not label new users untrustworthy merely because they are new.
+- Cap established users' weight advantage and require a minimum number of distinct voters for corroboration. One high-score member cannot establish a report alone.
+- Keep reliability scores private, while disclosing that contribution history affects weighting. Explain temporary restrictions; do not silently discard all low-score users' reports.
+- Rate-limit duplicates, rapid submissions, and suspicious voting. Community consensus is not ground truth and does not prevent coordinated accounts from manipulating results; disclose the prototype's limits.
+- Conflicting evidence yields a disputed state. Do not equate minority disagreement with proven false reporting. Treat automatic penalties based only on vote agreement as unvalidated.
+- Preserve report evidence and audit history. Capture vote-weight snapshots or versioned calculations so status changes are explainable and repeatable.
+- Collect clearing observations separately. A barrier that is clear later does not make its earlier report false; do not penalize the original reporter for changing conditions.
+- Report freshness/expiry rules, account recovery from restrictions, score bootstrap, and resistance to collusion need explicit rules. Unsupported or stale reports must not be silently presented as current corroborated facts.
+- UI wording: unverified, community corroborated, disputed, resolved. Never use community votes as a guarantee of safety or formal accessibility certification.
+
+Implement eligibility checks, duplicate protection, capped weights, deterministic aggregation, and visible history first. Use seed accounts only in clearly labelled demonstrations. Do not claim a reputation system is validated through seeded consensus.
 
 ### AI chatbot scope and implementation contract
 
@@ -174,10 +206,11 @@ Implementation rules:
 - Reuse place-query and report-validation services; do not create conflicting AI-specific accessibility rules.
 - Every factual place answer must be supported by returned observations or reports. Source cards show place name, facility values, available evidence, observation date, and verification state.
 - Missing data stays unknown. Never invent accessibility, timestamps, photos, or guarantees, and never present an unverified barrier as confirmed.
+- If no complete match exists, say so; offer clearly labelled partial matches with missing/unknown requirements or ask what the user would relax. Never silently change required filters.
 - Treat retrieved descriptions, reports, and chat text as untrusted input. They cannot override tool permissions or system instructions.
-- Keep writes outside the initial chatbot tools. Report drafting does not submit anything. An explicit user submission uses `POST /api/reports` and always starts unverified; only an authenticated reviewer can change status.
-- Keep manual filters and details usable during AI failures. Show clear retry/error states and preserve the user's query.
-- Limit input/context size, tool iterations, result count, request rate, and provider timeout. Select model/provider and establish a usage budget before integrating; AI charges are separate from map charges.
+- Keep writes outside the initial chatbot tools. Report drafting does not submit anything. Explicit signed-in submission uses `POST /api/reports` and starts unverified. The AI cannot vote, change reputation, or set status; the backend derives community status.
+- Keep manual filters and details usable during AI failures. Show an explicit system error and retry option, preserving the query. Do not invent default accessibility answers or simulate a successful AI response. Distinguish an AI outage from a backend outage.
+- Limit input/context size, tool iterations, result count, request rate, and provider timeout. Use DeepSeek's recommended `deepseek-flash` with thinking disabled. The user's approximately US$2 balance supports controlled testing/demo usage; AI charges are separate from map charges. Current model/rate references, checked 16 October 2026: [pricing](https://api-docs.deepseek.com/quick_start/pricing/), [thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/). Recheck before integration and log token usage without logging sensitive raw messages.
 - Keep `AI_API_KEY` backend-only and configure `AI_MODEL` there. These are proposed configuration names, not existing settings. Do not send disability histories, exact user location, or unrelated records to the provider. Avoid persistent raw chat storage by default; document any retention decision.
 - Keep the chat panel keyboard accessible, provide a labelled input and announced response/loading state, and preserve focus when map results change.
 
@@ -185,7 +218,7 @@ No vector database, model training, agent framework, or open-ended web browsing 
 
 ## Core demo and acceptance criteria
 
-**Demo story:** A student asks the assistant for a study space with a step-free entrance and accessible toilet. Matching markers and evidence cards appear. The student checks a temporary warning, submits a barrier report through the regular flow, and a reviewer confirms it and later marks it resolved. Chat-based report drafting is an optional extension.
+**Demo story:** A student asks for a study space with a step-free entrance and accessible toilet. Matching building markers and evidence cards appear, including current warnings. A signed-in student submits a barrier report; distinct community members corroborate it, then later clearing observations lead to resolution. Chat-based report drafting is optional.
 
 The MVP is demo-ready when:
 
@@ -194,8 +227,9 @@ The MVP is demo-ready when:
 - Known observations show their source and observation/check date; unknown dates remain unknown.
 - A submitted report persists after refresh and appears on the relevant location.
 - New reports are visibly unverified and do not silently overwrite established facility information.
-- Reviewer actions update the report status and preserve the earlier history.
-- Reviewer actions are restricted to the reviewer role, rather than merely hidden in the UI.
+- Authenticated community votes derive status and preserve history; unsigned requests, self-votes, duplicate votes, and client-set status/score changes are rejected.
+- Weight caps and distinct-voter thresholds work, including an all-new-user bootstrap and conflicting-vote cases.
+- A clearing event does not reduce the original reporter's reputation merely because the barrier is now gone.
 - The core flow works with a keyboard and has readable labels, contrast, and focus indicators.
 - Loading, empty results, failed submissions, and unavailable external services have understandable states.
 - A chatbot search returns database-backed results, visible interpreted filters, and matching map/list records.
@@ -204,18 +238,26 @@ The MVP is demo-ready when:
 - The normal search/list remains functional when the AI times out or fails.
 - Demo data is clearly identified, and the team has rehearsed the full flow on the deployed build.
 
+### Outage and presentation fallback
+
+Rehearse on Netlify/Render/Supabase and check backend health before the pitch to account for free-host cold starts. Keep a working local setup and a clearly identified recorded successful demo as backups. Cached building records, if implemented, must show their age; do not fabricate fresh reports or chat responses. Preserve unsent input and never mark a failed report/vote submission successful. English is the initial UI language; localization is future scope.
+
 ## Suggested data model
 
 Adapt this to the chosen stack; it is a design starting point, not an existing schema.
 
 | Entity | Suggested fields |
 | --- | --- |
-| Place | ID, name, category, campus area, coordinates, description, demo-data flag |
+| Campus | ID, name, region; IIUM Gombak initially |
+| Place/building | ID, campus ID, name, category, area, building coordinates, entrance details/optional coordinates, description, demo-data flag |
 | Facility observation | Place ID, facility type, yes/no/unknown value, observation date, source, evidence reference, verification status |
-| Barrier report | ID, place ID, barrier type, description, optional photo, observed time, submitted time, status |
-| Report action | Report ID, previous/new status, reviewer reference, timestamp, explanation |
+| Barrier report | ID, place ID, author ID, barrier type, description, optional photo, observed time, submitted time, derived status |
+| Community vote | Report ID, voter ID, stance, weight snapshot/version, timestamp; unique voter/report |
+| Clearance observation | Report ID, author ID, evidence, observed/submitted times, corroboration state |
+| Report action | Report ID, previous/new state, aggregation version, timestamp, explanation |
+| Contributor reliability | Auth user ID, internal score/signals, restrictions, calculation version; private |
 
-Suggested report states: `unverified -> confirmed -> resolved`, with `unverified -> rejected` for invalid reports. If a contributor can say the barrier has cleared, treat that as information for review rather than granting reviewer authority.
+Proposed states are `unverified`, `community_corroborated`, `disputed`, and `resolved`. Community votes derive corroboration/dispute; corroborated clearing observations derive resolution. Specify transition and freshness rules before implementing. An individual contributor cannot directly resolve or erase a report. Reopening and abuse-removal behavior remain to be designed.
 
 Keep permanent facility observations separate from temporary reports. A blocked ramp is a current warning; it does not mean the building never had a ramp.
 
@@ -227,7 +269,7 @@ Keep permanent facility observations separate from temporary reports. A blocked 
 - Do not require users to disclose a disability, medical history, or exact live location.
 - Request location permission only for an optional nearby feature; browsing must work without it.
 - Avoid identifiable faces and personal information in evidence photos. Validate uploads if photo submission is implemented.
-- Distinguish contributor reports from reviewer-confirmed information. Verification means someone reviewed evidence; it is not a guarantee or formal accessibility certification.
+- Distinguish unverified, corroborated, disputed, and resolved reports. Community corroboration describes agreement over evidence; it is not a guarantee or formal accessibility certification.
 - Use fictional or clearly labelled sample data unless real campus observations have been checked. Do not invent photos, timestamps, testimonials, or university endorsements.
 - A report is submitted to this prototype. Do not imply that campus authorities have received it without a real integration.
 - Express IIUM value alignment through dignity, truthful information, responsible handling of data, and mutual assistance.
@@ -260,15 +302,15 @@ Assign actual names once the team agrees. Balance tasks against the team's stren
 
 | Owner | Main responsibility |
 | --- | --- |
-| Teammate 1 | Accessible UI, place details, list, filters, and chat panel/source cards |
-| Teammate 2 | Data model, persistence, report lifecycle, reviewer authorization, and deployment |
-| Teammate 3 | Map integration, chatbot tool orchestration using shared backend services, seed evidence, and demo coordination; rebalance workload as needed |
+| Teammate 1 | Frontend: accessible Vue/Tailwind UI, map/list, details, chat/source cards, sign-in and voting screens |
+| User | Backend: FastAPI, identity validation, reports/votes, trust aggregation, DeepSeek tools, Render deployment |
+| Teammate 3 | Database: Supabase schema/migrations, constraints, Auth/Storage setup, seed/import workflow, and data policies |
 
 Suggested 24-hour allocation:
 
 - **Hours 0–2:** Validate the problem, check the existing IIUM map, agree scope and stack, sketch the demo, and define shared data/API contracts.
 - **Hours 2–6:** Establish the application, seed data, initial deployment, and a working place list/details flow.
-- **Hours 6–14:** Build filters, map, report submission, reviewer actions, and persistence. Once place queries work, connect chatbot search/details tools. Integrate continuously.
+- **Hours 6–14:** Build filters, map, signed-in reporting/voting, deterministic aggregation, and persistence. Once place queries work, connect chatbot search/details tools. Integrate continuously.
 - **Hours 14–18:** Complete chatbot source cards and map synchronization, evidence/status presentation, accessibility, and error handling. Add report drafting only if the MVP is stable.
 - **Hours 18–24:** Freeze features, verify the deployed demo, fix material issues, prepare slides, and rehearse Q&A.
 
@@ -276,12 +318,12 @@ Suggested 24-hour allocation:
 
 1. Inspect the current repository and applicable `AGENTS.md` before editing. This file describes the initial state and may become outdated.
 2. Check the latest user direction. Use the documented stack as the implementation baseline; optional features, provider accounts, and external integrations are not implemented merely because they are listed here.
-3. Preserve the agreed architecture. Resolve remaining provider/auth choices early and record them rather than creating incompatible foundations or replacing the stack without a concrete reason.
+3. Preserve the agreed Vue/Netlify, FastAPI/Render, Supabase, and DeepSeek architecture. Finalize authentication configuration and trust rules rather than reintroducing dedicated reviewer workflows or the earlier single-origin deployment plan.
 4. Preserve teammates' changes. Agree file ownership when work overlaps and keep shared data contracts consistent.
-5. Build the smallest working vertical flow first: stored place -> list -> details -> persistent report -> reviewer action.
+5. Build the smallest working vertical flow first: stored building -> list/details -> authenticated report -> distinct community votes -> derived status/history.
 6. Keep backend secrets out of source control and browser bundles. A restricted browser Google Maps key is intentionally public. Document environment variable names without real values in committed examples.
 7. Validate report input and authorization on the trusted backend, not only in client UI controls.
-8. Verify meaningful behavior: filtering unknown facilities, persistent reports, allowed status transitions, reviewer access restrictions, the main keyboard flow, grounded chat results, invalid tool rejection, and AI failure fallback.
+8. Verify meaningful behavior: unknown facility filtering, warning retention, persistent reports, authenticated contributions, vote uniqueness/caps/thresholds, clearing events, private reliability, keyboard flow, grounded chat, invalid tool rejection, and explicit outage states.
 9. Use the chosen framework's standard build/lint checks. Document actual commands once tooling exists; do not claim checks passed unless run.
 10. Record setup, seed/reset procedure, deployment details, and known limitations in the repository as implementation progresses.
 11. Keep this onboarding accurate as decisions change. Clearly separate completed work, remaining work, and future ideas.
@@ -289,14 +331,14 @@ Suggested 24-hour allocation:
 
 ## Next actions
 
-- Assign team owners and confirm pilot area, hosting, photo storage, and reviewer-auth choices.
+- Use the confirmed role split and IIUM Gombak pilot; finalize field-collection boundaries and experimental trust/transition rules.
 - Scaffold the documented stack, pin dependencies, and add working setup commands and environment examples to README.md.
 - Configure a restricted Google Maps browser key and map ID; deploy an early map/list prototype.
 - Check the current IIUM accessibility map and reporting process.
 - Seek feedback from a wheelchair user or relevant campus representative through a team-authorized approach.
 - Agree the three facility definitions and collect a small, honestly labelled dataset.
-- Assign owners and define the place/report data contract.
-- Select an AI provider/model and finalize bounded tool schemas plus the chat response contract.
+- Define building/entrance, report, vote, clearance, and private reliability contracts with the database teammate.
+- Configure Supabase Auth/Storage, Netlify, Render, and backend-only DeepSeek credentials; finalize bounded tool schemas and the chat response contract.
 - Implement and deploy the core flow, then integrate chatbot search/details over the same data services.
 
 ## Pitch and Q&A preparation
@@ -306,7 +348,7 @@ Lead with one student's decision, demonstrate the complete workflow, and explain
 Prepare answers to:
 
 - **Why not Google Maps or AccessNow?** Show the campus-specific evidence and reporting workflow. Acknowledge existing tools and avoid unverified claims about their limitations.
-- **How do you know information is correct?** Explain sources, observation dates, unknown values, and reviewer status, including the prototype's limits.
-- **Who maintains it after the hackathon?** Propose campus stewardship and recurring checks; do not present a proposed partner as committed.
+- **How do you know information is correct?** Explain sources, observation dates, unknown values, and community corroboration/disputes, including the prototype's limits.
+- **Who maintains it after the hackathon?** Explain community observations, weighted corroboration, dispute handling, and recurring checks; no campus partner is committed.
 - **What is the AI doing?** It interprets campus questions, calls permitted search/details tools over stored records, and returns evidence-backed cards and map results. Report drafting, if implemented, requires explicit submission. Demonstrate only capabilities that actually work.
 - **What did you validate?** Report actual interviews, observations, and tests. If none occurred, say so and explain the next validation step.
