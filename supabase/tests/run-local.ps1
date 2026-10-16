@@ -24,6 +24,11 @@ try {
     foreach ($checkFile in @('building_foundation.sql', 'place_evidence.sql', 'barrier_reports.sql', 'report_votes.sql', 'clearance_observations.sql', 'clearance_votes.sql', 'report_history.sql', 'contributor_state.sql', 'community_read_views.sql')) {
         Invoke-PostgresTool 'psql' ($connectionArgs + @('-f', (Join-Path $PSScriptRoot $checkFile)))
     }
+    $seedPython = Join-Path $PSScriptRoot '../../backend/.venv/Scripts/python.exe'
+    & $seedPython (Join-Path $PSScriptRoot '../../seed/tests/test_import_places.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Seed validation tests failed' }
+    & $seedPython (Join-Path $PSScriptRoot '../../seed/tests/verify_postgres.py') --pg-bin $PostgresBin --port $Port
+    if ($LASTEXITCODE -ne 0) { throw 'Seed PostgreSQL integration checks failed' }
 } finally {
     if ($started) {
         Invoke-PostgresTool 'pg_ctl' @('-D', $clusterPath, '-m', 'fast', '-w', 'stop')
