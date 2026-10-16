@@ -2,6 +2,8 @@
 
 Implemented `POST /api/chat`. Public browsing/chat does not require sign-in. Requires backend `AI_API_KEY` plus an injected building repository; neither is provisioned by this PR. Frontend/database review and a real-provider smoke test remain pending.
 
+Explicit local demo option: with `APP_ENV=development` and `DEMO_DATA_ENABLED=true`, the app supplies three fictional building records while still using the real DeepSeek provider. Chat responses include `data_mode: "demo"` and a mandatory local-demo prefix; cards retain `is_demo: true`. Normal responses default to `data_mode: "live"`. The model is instructed that demo buildings are fictional. This is not an outage fallback; failures still return errors. Production rejects demo mode and real adapters are never silently replaced. See [local testing instructions](../backend/README.md#local-chatbot-demo-without-supabase).
+
 ```json
 {
   "message": "Find a study building with a step-free entrance",

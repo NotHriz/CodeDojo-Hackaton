@@ -60,6 +60,7 @@ class Clarification(StrictModel):
 
 
 class ChatResponse(BaseModel):
+    data_mode: Literal["live", "demo"] = "live"
     answer: str
     status: Literal["answered", "clarification", "no_matches"]
     places: list[PlaceSummary] = Field(default_factory=list)
@@ -208,8 +209,11 @@ def bounded_source(place: PlaceDetail) -> PlaceDetail:
     return PlaceDetail.model_validate(data)
 
 
-def run_chat(request: ChatRequest, provider: ChatProvider, repository: PlaceRepository) -> ChatResponse:
-    messages = [{"role": "system", "content": SYSTEM}]
+def run_chat(request: ChatRequest, provider: ChatProvider, repository: PlaceRepository, *, demo_mode: bool = False) -> ChatResponse:
+    instruction = SYSTEM
+    if demo_mode:
+        instruction += "\nLOCAL DEMO: all building records are fictional. Explicitly say this in your answer; do not describe them as real IIUM facilities or actual inspections."
+    messages = [{"role": "system", "content": instruction}]
     messages.extend(item.model_dump() for item in request.history)
     context = {"question": request.message, "selected_place_id": request.selected_place_id}
     messages.append({"role": "user", "content": json.dumps(context)})

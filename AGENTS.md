@@ -33,5 +33,6 @@ Read any area to understand dependencies. When a fix needs another owner's files
 - Keep documentation accurate about placeholders versus implemented functionality.
 - Public browsing is allowed; reporting/voting requires authenticated identity. Private reliability and backend secrets must never leak into public responses or frontend bundles.
 - Never substitute fake data or canned accessibility answers for an AI/API failure in the live application.
+- The user-authorized local demo is an explicit development-only fixture mode, not an outage fallback. Preserve its default-off flag, production rejection, real-adapter precedence, and visible fictional-data labels.
 
 Do not spawn sub-agents unless the user or another applicable instruction explicitly requests delegation or parallel agent work. These boundaries coordinate work; they are not filesystem or GitHub access controls.

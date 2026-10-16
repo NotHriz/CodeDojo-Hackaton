@@ -24,7 +24,12 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
     if not request.app.state.chat_budget.reserve(client):
         raise HTTPException(429, "Assistant request limit reached. Please retry later.", headers={"Retry-After": str(request.app.state.chat_budget.retry_after())})
     try:
-        return run_chat(body, provider, repository)
+        demo_mode = request.app.state.demo_mode
+        result = run_chat(body, provider, repository, demo_mode=demo_mode)
+        if demo_mode:
+            result.data_mode = "demo"
+            result.answer = "LOCAL DEMO — fictional buildings, not verified campus information.\n" + result.answer
+        return result
     except AIUnavailable:
         raise HTTPException(503, "The AI assistant is temporarily unavailable. Please retry or use the map and filters.") from None
     except InvalidAIResponse:

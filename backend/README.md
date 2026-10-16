@@ -34,11 +34,40 @@ Set-Location backend
 .venv/Scripts/python.exe -m pytest
 ```
 
-All 110 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
+All 118 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
 
 Authentication handoff: [contracts/auth.md](../contracts/auth.md). Set `SUPABASE_URL`, configure ES256/RS256 signing keys in Supabase, and send bearer tokens to `/api/auth/me`. Only the verified user UUID is returned. Legacy HS256 tokens are unsupported; immediate token revocation and live contribution restrictions are not implemented.
 
 Chat handoff: [contracts/chat.md](../contracts/chat.md). `POST /api/chat` uses DeepSeek only after `AI_API_KEY` and a building repository are available. No paid requests were made. Output contains structured places/sources/filters; failures return explicit errors. The in-memory demo limiter resets with the process and is not a spending hard cap.
+
+## Local chatbot demo without Supabase
+
+To test real DeepSeek responses before the database adapter is ready, explicitly enable fictional building data in your ignored `backend/.env`:
+
+```dotenv
+APP_ENV=development
+DEMO_DATA_ENABLED=true
+AI_API_KEY=your-deepseek-key
+AI_MODEL=deepseek-flash
+```
+
+Restart Uvicorn after editing `.env`. Open `/api/docs`, confirm its **LOCAL DEMO** description, and try `GET /api/places`. It should return three fictional buildings with `data_mode: "demo"` and `is_demo: true`. Coordinates are examples, dates remain unknown, and none of these records describe verified IIUM facilities.
+
+Then use **POST /api/chat -> Try it out**:
+
+```json
+{
+  "message": "Find a study building with a step-free entrance and accessible toilet",
+  "history": [],
+  "selected_place_id": null
+}
+```
+
+Two fictional study buildings match; one has an unverified fictional ramp warning. Responses include a local-demo prefix, `data_mode: "demo"`, and labelled source cards. Try a detail question with `selected_place_id: "demo-study-annex"` or a study search requiring designated parking to test warnings and zero matches.
+
+The model response is real and consumes your DeepSeek credit. Provider failures remain explicit errors, never canned accessibility answers. Automated tests use mocked providers and spend no credit.
+
+The committed example defaults to `DEMO_DATA_ENABLED=false`. Production refuses demo mode, explicit real adapters take precedence, and a failing real adapter never switches to demo records. Demo buildings cannot be combined with a community persistence adapter, so this does not simulate reports/voting or write fictional records into a real database. Turn the flag off when connecting actual campus data.
 
 Community handoff: [contracts/community.md](../contracts/community.md). Report/vote mutations require authenticated identity. New reports/clearing observations require an `Idempotency-Key` UUID header. No trust policy is active by default: supply an explicitly reviewed `TrustPolicy` after the real community adapter is ready. Adapter methods must provide database-enforced uniqueness, restrictions, atomic status/history changes, and idempotency; in-memory tests do not prove real transaction behavior.
 
