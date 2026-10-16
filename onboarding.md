@@ -15,10 +15,97 @@ Read this file before planning or implementing features. It records the discussi
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
 - Akses Campus and IIUM are working project name and pilot location, respectively; branding and pilot boundaries can change.
-- No application has been implemented yet. At the time of this onboarding, the workspace contained only `.git` and an empty `.gitignore`.
-- No framework, database, map provider, hosting service, API credentials, or team member assignments have been confirmed.
+- No application has been implemented yet. The repository currently contains project documentation and an empty `.gitignore`; no application scaffold or dependency manifests exist.
+- The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
+- Hosting and object-storage providers, credentials, pilot boundaries, and named team assignments remain open. The stack is documented as a build plan, not installed or deployed software.
 - The MVP, role split, and schedule below are recommendations from the planning discussion, not completed work.
 - Campus data coverage, access to intended users, and the current state of IIUM's existing accessibility map remain unverified.
+
+## Stack and architecture
+
+| Layer | Baseline | Responsibility |
+| --- | --- | --- |
+| Frontend | Vue 3, Vite, JavaScript, Vue Router | Map/list browsing, filters, place details, report forms, reviewer view |
+| Styling | Tailwind CSS with its Vite plugin | Responsive layout, consistent components, visible interaction states |
+| Maps | Google Maps JavaScript API with Advanced Markers | Base map and custom facility/barrier markers |
+| Backend | Python, FastAPI, Pydantic | Input validation, queries, authentication, and report lifecycle |
+| Database access | SQLModel | Python models and database queries |
+| Database | PostgreSQL | Shared persistent places, observations, reports, reviewer accounts, and history |
+| Photos | Object storage, provider undecided | Image files; store references and metadata in PostgreSQL |
+| Optional AI | Provider undecided, backend-only integration | Convert natural-language requests into supported filters |
+
+Use JavaScript unless the team explicitly chooses TypeScript. Start with Vue composables for shared state. Introduce additional libraries only when they resolve an actual need.
+
+### Application boundaries
+
+Use a single repository and one Python backend, organized into feature modules. The browser calls Google Maps directly for map display and calls FastAPI under `/api` for application data. Database credentials and optional AI credentials stay on the backend. The browser never connects directly to PostgreSQL.
+
+```mermaid
+flowchart TD
+    Vue[Vue and Tailwind in browser] -->|Map display| Maps[Google Maps API]
+    Vue -->|Application requests| API[FastAPI /api]
+    API --> DB[(PostgreSQL)]
+    API --> Photos[Object storage]
+    API -. Optional search interpretation .-> AI[AI service]
+```
+
+Development: run Vite and FastAPI separately, with Vite proxying `/api` to FastAPI. Production plan: build Vue, serve its assets through the FastAPI service, and expose one public origin. Register `/api` routes before a frontend fallback; missing API routes must return API errors rather than HTML. Client-side routes need an SPA fallback. Hosting selection remains open.
+
+Use managed PostgreSQL for the deployed shared prototype. SQLite is an optional local fallback only when the team needs it; a deployed SQLite database would require persistent disk and a single-instance deployment plan. Verify that reports survive application restarts on the chosen host.
+
+### Planned repository structure
+
+These paths are proposed and do not exist yet.
+
+```text
+frontend/
+  src/
+    components/       # Map, markers, filters, bottom sheet
+    views/            # Explore, reports, reviewer screen
+    composables/      # Shared reactive state and logic
+    services/         # API client
+backend/
+  app/
+    main.py
+    models.py
+    schemas.py
+    database.py
+    routers/          # Places, reports, authentication
+    services/         # Report transitions, optional AI
+seed/
+README.md
+onboarding.md
+```
+
+### Initial API contract
+
+| Endpoint | Purpose | Access |
+| --- | --- | --- |
+| `GET /api/places` | List places with facility filters | Public |
+| `GET /api/places/{id}` | Details, observations, evidence, and active warnings | Public |
+| `POST /api/reports` | Submit an unverified report | Public, with validation and abuse controls |
+| `PATCH /api/reports/{id}/status` | Confirm, reject, or resolve a report and append history | Authenticated reviewer |
+| `POST /api/auth/login` | Authenticate a reviewer | Valid reviewer credentials |
+
+Agree request/response schemas before splitting implementation. A required facility filter matches `yes`, not `unknown`. Enforce allowed status transitions and reviewer authorization on the backend. Record the status change and history entry in one transaction.
+
+The reviewer-auth implementation remains to be selected. Use hashed passwords and backend-validated sessions or tokens; never ship reviewer secrets in frontend code. If using cookies, configure secure cookie handling and CSRF protection for mutations as appropriate to the deployment.
+
+## Google Maps integration and UI reference
+
+The user supplied a Toilet Finder screenshot as a layout reference: a full map, custom markers, selected marker emphasis, a bottom detail sheet, search/location controls, a list toggle, and bottom navigation. Adapt the interaction pattern to Akses with original assets and facility/report content.
+
+- Render our stored latitude/longitude records as Advanced Markers. Selecting a marker and selecting its list item must open the same place details.
+- Store observations and reports in our database. Markers do not automatically publish listings or reports to public Google Maps.
+- Preserve Google attribution and keep controls clear of it. Provide icons plus labels and an accessible list alternative.
+- Configure a Google Cloud billing account, enable Maps JavaScript API, create a browser API key, and configure a map ID for Advanced Markers.
+- Browser map keys are visible by design: restrict them to approved website origins/referrers and the required API. Keeping the key in an environment file does not make it secret after a frontend build.
+- Pricing checked on 16 October 2026: Dynamic Maps has 10,000 free monthly loads and then US$7 per 1,000 additional loads through 100,000 monthly loads. Taxes and other APIs are excluded; usage is aggregated across projects on the billing account. Recheck before launch.
+- Adding custom markers, panning, and zooming do not create extra map loads. Creating/recreating the map does. Keep the map instance stable when filters change.
+- Places, geocoding, and routes have separate pricing. For the MVP, use stored campus coordinates and our own search/filter data.
+- Set available quotas and billing alerts. Alerts notify; they are not a spending cap. The accessible list should remain usable if Google Maps fails.
+
+References: [Advanced Markers](https://developers.google.com/maps/documentation/javascript/advanced-markers/overview), [setup](https://developers.google.com/maps/documentation/javascript/advanced-markers/start), [pricing](https://developers.google.com/maps/billing-and-pricing/pricing), [map-load FAQ](https://developers.google.com/maps/faq), [API key restrictions](https://developers.google.com/maps/api-security-best-practices).
 
 ## Problem and intended users
 
@@ -158,11 +245,11 @@ Suggested 24-hour allocation:
 ## Engineering and future-agent guidance
 
 1. Inspect the current repository and applicable `AGENTS.md` before editing. This file describes the initial state and may become outdated.
-2. Check the latest user direction. Do not infer that optional features, a particular stack, or external integrations have been approved or implemented.
-3. If the stack is still undecided, propose a small architecture the team can maintain and resolve the choice before creating incompatible foundations.
+2. Check the latest user direction. Use the documented stack as the implementation baseline; optional features, provider accounts, and external integrations are not implemented merely because they are listed here.
+3. Preserve the agreed architecture. Resolve remaining provider/auth choices early and record them rather than creating incompatible foundations or replacing the stack without a concrete reason.
 4. Preserve teammates' changes. Agree file ownership when work overlaps and keep shared data contracts consistent.
 5. Build the smallest working vertical flow first: stored place -> list -> details -> persistent report -> reviewer action.
-6. Keep secrets out of source control and browser bundles. Document environment variable names without secret values.
+6. Keep backend secrets out of source control and browser bundles. A restricted browser Google Maps key is intentionally public. Document environment variable names without real values in committed examples.
 7. Validate report input and authorization on the trusted backend, not only in client UI controls.
 8. Verify meaningful behavior: filtering unknown facilities, persistent reports, allowed status transitions, reviewer access restrictions, and the main keyboard flow.
 9. Use the chosen framework's standard build/lint checks. Document actual commands once tooling exists; do not claim checks passed unless run.
@@ -172,7 +259,9 @@ Suggested 24-hour allocation:
 
 ## Next actions
 
-- Confirm team skills, pilot area, and technology stack.
+- Assign team owners and confirm pilot area, hosting, photo storage, and reviewer-auth choices.
+- Scaffold the documented stack, pin dependencies, and add working setup commands and environment examples to README.md.
+- Configure a restricted Google Maps browser key and map ID; deploy an early map/list prototype.
 - Check the current IIUM accessibility map and reporting process.
 - Seek feedback from a wheelchair user or relevant campus representative through a team-authorized approach.
 - Agree the three facility definitions and collect a small, honestly labelled dataset.
