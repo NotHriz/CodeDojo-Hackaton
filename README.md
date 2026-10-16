@@ -8,7 +8,7 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-**Backend foundation implemented.** FastAPI runs locally with `/api/health`, `/api/docs`, environment configuration, explicit CORS origins, and sanitized JSON errors. Runtime/test dependencies are pinned and 14 backend tests pass. Frontend, database schema, building endpoints, authentication, community voting, AI, seed data, and deployment are not implemented yet. See [backend startup instructions](backend/README.md#local-development).
+**Backend foundation and building endpoints implemented.** FastAPI runs with `/api/health`, `/api/docs`, configuration, CORS, sanitized errors, and building search/details. Runtime/test dependencies are pinned and 28 backend tests pass. Building endpoints return 503 until the database adapter is connected; there is no runtime mock data. Frontend, database schema, authentication, community voting, AI, seed data, and deployment remain pending. See [backend startup instructions](backend/README.md#local-development) and [building API handoff](contracts/places.md).
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
@@ -179,7 +179,7 @@ Custom markers, panning, and zooming do not add map loads; recreating the map do
 - Avoid collecting disability histories or requiring precise live location.
 - Send only necessary context to the AI provider, avoid logging sensitive chat content, and ground answers in database evidence.
 
-The backend foundation has 14 passing tests and a passing dependency check. Product workflows and external services have not been implemented or tested. Add frontend build, seed, and deployment commands as they become available.
+The backend has 28 passing tests covering foundation and building endpoints using explicit test repositories. Database/provider integration and complete product workflows have not been tested. Add frontend build, seed, and deployment commands as they become available.
 
 For outages, show accurate component-specific errors, retain unsent form input, and never show failed submissions as successful. A local setup and clearly identified recorded demo are presentation backups; cached records, if used, must display their age. The user reports no submission artifact is required.
 

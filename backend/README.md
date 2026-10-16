@@ -2,7 +2,7 @@
 
 Owner: the user (backend). Teammate 3 owns `app/models.py` and `app/database.py`; agree their interfaces before backend services depend on them. See [file ownership and handoffs](../COLLABORATION.md).
 
-The FastAPI foundation is runnable: process liveness, environment settings, explicit CORS origins, API documentation, and sanitized JSON errors. Building search, database connections, authentication, voting, and AI are not implemented yet. `app/models.py` and `app/database.py` remain database-owned placeholders.
+The FastAPI foundation and building list/details API are implemented. Database connections, authentication, voting, and AI are not implemented yet. `app/models.py` and `app/database.py` remain database-owned placeholders. Building endpoints return an explicit 503 until the database teammate supplies the repository adapter; tests alone use test records.
 
 ## Local development
 
@@ -22,7 +22,7 @@ Copy the environment example only when creating a new local environment; do not 
 - Interactive API docs: `http://localhost:8000/api/docs`
 - OpenAPI: `http://localhost:8000/api/openapi.json`
 
-Liveness returns `{"status":"ok","service":"akses-campus-api"}`. This proves only that the API process responds; it does not check Supabase or DeepSeek readiness. Unimplemented endpoints return 404, not mock data.
+Liveness returns `{"status":"ok","service":"akses-campus-api"}`. This proves only that the API process responds; it does not check Supabase or DeepSeek readiness. Unimplemented endpoints return 404, not mock data. Building endpoints are documented in `/api/docs` and [the handoff contract](../contracts/places.md).
 
 ## Tests
 
@@ -34,11 +34,11 @@ Set-Location backend
 .venv/Scripts/python.exe -m pytest
 ```
 
-Tests cover liveness without credentials, unavailable endpoints, HTTP/validation errors, sanitization, CORS allowlisting, and settings precedence. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading.
+Tests cover liveness, configuration, HTTP errors, sanitization, CORS, building filters, campus isolation, pagination, evidence/warnings, genuine misses, and disconnected/broken repositories. All 28 tests pass. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading.
 
 ## API foundation contract
 
-Application errors use `{"error":{"code":"...","message":"..."}}`. Current codes are `not_found` (404), `method_not_allowed` (405), `validation_error` (422), `internal_error` (500), and `request_failed` for other HTTP errors. Validation failures omit submitted values; unexpected errors omit internal exception details. CORS preflight rejection is middleware-owned and can be plain text; clients must handle non-JSON infrastructure responses too.
+Application errors use `{"error":{"code":"...","message":"..."}}`. Current codes are `not_found` (404), `method_not_allowed` (405), `validation_error` (422), `service_unavailable` (503), `internal_error` (500), and `request_failed` for other HTTP errors. Validation failures omit submitted values; unexpected errors omit internal exception details. CORS preflight rejection is middleware-owned and can be plain text; clients must handle non-JSON infrastructure responses too.
 
 `ALLOWED_ORIGINS` is a comma-separated list of exact HTTP(S) origins without paths, trailing slashes, credentials, or wildcards. Empty disables cross-origin browser access. Bearer-token headers are permitted; cookie credentials are disabled. CORS is a browser policy, not authentication.
 
@@ -62,6 +62,8 @@ Keep credentials on Render/the backend. Supabase Auth tokens must be verified be
 
 Agree trust thresholds and shared schemas before implementing the services. Register no fake success responses for unimplemented features. Deployment target: Render; persistent data and photos belong in Supabase.
 
-Next feature: `GET /api/places` and `GET /api/places/{id}`. Agree building/entrance field shapes and the database-session interface with teammate 3, and response examples with teammate 1, before implementing that shared slice. This foundation does not change their files or prescribe their schema.
+Implemented: `GET /api/places` with name/category/campus and required-facility filters, stable sorting, and pagination; `GET /api/places/{place_id}` with entrance/observation/evidence fields and active warnings. Required facilities match only `yes`; warnings never remove matches; no matches never relax filters.
+
+Next handoff: teammate 3 provides a persistence adapter implementing `PlaceRepository` and teammate 1 reviews [response examples](../contracts/places.md). The backend owner then wires that adapter into `create_app`. No database-owned files or frontend files were changed for this feature. Schema review, actual data access, and end-to-end external integration remain pending.
 
 See [project README](../README.md) and [onboarding](../onboarding.md) for scope and acceptance criteria.

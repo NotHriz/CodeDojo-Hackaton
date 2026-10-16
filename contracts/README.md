@@ -2,7 +2,7 @@
 
 Editor: the user/backend owner. Affected frontend and database teammates review changes before implementation.
 
-This directory holds future versioned API examples and shared interface decisions. **No finalized schemas or endpoint specifications exist here yet.** The planned endpoints in [onboarding](../onboarding.md#initial-api-contract) are the starting point.
+This directory holds versioned API examples and shared interface decisions. [Building discovery v0.1](places.md) is implemented/tested in the backend and awaits frontend/database review; its persistence adapter is not connected. Other planned endpoints in [onboarding](../onboarding.md#initial-api-contract) remain unimplemented.
 
 Agree the first building list/details slice before three teammates implement incompatible shapes. For each slice, record:
 

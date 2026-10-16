@@ -34,7 +34,7 @@ def test_liveness_without_provider_credentials(settings):
 
 def test_unimplemented_endpoint_is_not_fake_success(settings):
     with TestClient(create_app(settings)) as client:
-        response = client.get("/api/places")
+        response = client.get("/api/not-implemented")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "not_found"
 
