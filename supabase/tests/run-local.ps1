@@ -35,6 +35,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Community record backend integration checks failed' }
     & $seedPython (Join-Path $PSScriptRoot 'verify_runtime_places.py') --port $Port
     if ($LASTEXITCODE -ne 0) { throw 'Runtime building API integration checks failed' }
+    & $seedPython (Join-Path $PSScriptRoot 'verify_session_mappings.py') --port $Port
+    if ($LASTEXITCODE -ne 0) { throw 'Owned SQLModel/session integration checks failed' }
+    & $seedPython (Join-Path $PSScriptRoot 'verify_target_audit.py') --port $Port
+    if ($LASTEXITCODE -ne 0) { throw 'Read-only target audit checks failed' }
+    & $seedPython (Join-Path $PSScriptRoot 'test_target_audit.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Target audit privacy/unit checks failed' }
 } finally {
     if ($started) {
         Invoke-PostgresTool 'pg_ctl' @('-D', $clusterPath, '-m', 'fast', '-w', 'stop')

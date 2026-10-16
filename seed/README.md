@@ -6,6 +6,13 @@ Owner: teammate 3, using observations collected by the whole team.
 
 Start with approximately 10–15 IIUM Gombak building records. The input maps to the accepted campus/building/evidence schema. Record campus/building identity, coordinates, entrance location, facility yes/no/unknown values, evidence references, and observation dates.
 
+The tracked [collection-template.json](collection-template.json) is an empty,
+valid collection skeleton. Copy it to a separate collection file and fill it with
+human-reviewed observations. It contains no sample building coordinates, check
+dates or accessibility claims; validating it produces zero data inserts. No
+actual campus dataset is currently available. See the database owner's
+[target and deployment plan](../supabase/DEPLOYMENT_PLAN.md) before shared imports.
+
 ## Validate and prepare
 
 Use the existing backend Python environment and pinned dependencies; no additional packages are needed. From the repository root:

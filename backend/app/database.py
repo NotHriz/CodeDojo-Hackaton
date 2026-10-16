@@ -27,5 +27,16 @@ class Database:
         with Session(self.engine) as session:
             yield session
 
+    @contextmanager
+    def transaction(self):
+        """Own one mutation transaction; commit on success, roll back on failure.
+
+        Repositories must still acquire target/contributor locks and perform
+        all vote, status and event writes inside this single context.
+        """
+        with self.session() as session:
+            with session.begin():
+                yield session
+
     def close(self):
         self.engine.dispose()
