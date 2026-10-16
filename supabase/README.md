@@ -2,7 +2,7 @@
 
 Owner: teammate 3/database.
 
-The migrations implement campuses, buildings, entrances, facility observations, barrier-report creation and vote storage, clearing-observation creation storage, and ordered photo/evidence references. They follow [the building contract](../contracts/places.md) and [the community contract](../contracts/community.md). No records are seeded. Absent facility information defaults to `unknown`; observation aggregation and community transactions still need implementation before live use.
+The migrations implement campuses, buildings, entrances, facility observations, barrier-report and clearing-observation creation/vote storage, and ordered photo/evidence references. They follow [the building contract](../contracts/places.md) and [the community contract](../contracts/community.md). No records are seeded. Absent facility information defaults to `unknown`; observation aggregation and community transactions still need implementation before live use.
 
 ## Migration runner
 
@@ -18,7 +18,7 @@ The migration expects the existing Supabase `anon`, `authenticated`, and `servic
 
 ## Access and verification
 
-All eleven tables enable RLS with no browser policies and revoke table access from public/browser roles. Only the backend service role receives CRUD access; public browsing remains through FastAPI. Reports/clearing observations contain private author/retry metadata and votes contain private identities/weights; these rows must not be exposed directly. No frontend credentials or private contributor reliability records are introduced.
+All twelve tables enable RLS with no browser policies and revoke table access from public/browser roles. Only the backend service role receives CRUD access; public browsing remains through FastAPI. Reports/clearing observations contain private author/retry metadata and votes contain private identities/weights; these rows must not be exposed directly. No frontend credentials or private contributor reliability records are introduced.
 
 With PostgreSQL 18 installed locally, run from the repository root:
 
@@ -27,7 +27,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 # Optional: -PostgresBin 'C:\path\to\postgresql\bin' -Port 55440
 ```
 
-The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all five SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, and clearing chronology tied to the actual parent timestamp. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
+The harness creates a unique temporary cluster, listens only on loopback with local trust authentication, applies all migrations, and runs all six SQL suites. Checks cover defaults, constraints, foreign keys, backend access, browser denial, RLS, nullable observation metadata, timestamp offsets, ordered evidence, protected parent deletion, scoped submission uniqueness, future-time limits, three-reference evidence limits, self-vote rejection, vote replacement, bounded policy snapshots, clearing chronology tied to the actual parent timestamp, and clearing-vote parent membership. It stops the server in `finally` and retains temporary files for diagnosis. It never reads application credentials or connects to the shared database. Tests use fictional records rolled back at completion. Local trust authentication is exclusively for this disposable test cluster.
 
 ## Evidence mapping for the backend adapter
 
@@ -68,11 +68,19 @@ The adapter must lock the report, check current eligibility/campus, upsert one m
 
 The future adapter must recheck verified identity, eligibility, campus and chronology in the create transaction; compare normalized digests on retry; and write the clearing observation/evidence/audit event together. Identity and retry metadata stay out of public responses. `ClearanceRecord.report_id` identifies the parent; map the existing response fields without adding `report_observed_at` or digest fields. Missing evidence remains an empty array. SQL checks enforce basic URL shape; backend `HttpUrl` and reference permissions still apply.
 
-No clearing votes or resolution trigger are added. A new claim leaves the parent report unchanged, preserving its original evidence/observation time. Resolution still requires a corroborated clearing observation and the backend's explicit trust functions in an atomic transaction.
+Creating a claim leaves the parent report unchanged, preserving its original evidence/observation time. Clearing-vote storage is described below; resolution still requires a corroborated clearing observation and the backend's explicit trust functions in an atomic transaction.
+
+## Clearing-vote storage handoff
+
+`20261016000600_clearance_votes.sql` adds private `clearance_votes`, keyed by `(clearance_id, voter_id)`. A composite foreign key binds the observation ID, parent report ID and clearing author together; this rejects votes placed under the wrong report or with a spoofed author. The referenced clearing observation cannot be reassigned to another report/author while votes refer to it. A check rejects self-voting by the clearing author. The original barrier reporter may vote on another member's clearing observation; there is no additional ban on the barrier author.
+
+The required stance, weight, complete policy snapshot and `updated_at` follow the report-vote rules, with no active defaults. Identity, weight and policy values remain backend-owned and private. One member may vote independently on multiple clearing observations; replacing a vote must update only the selected observation's row and refresh its complete snapshot and timestamp.
+
+The adapter must lock the parent report and relevant observation, recheck eligibility/campus and parent membership, upsert the vote, recalculate both observation and parent status using the backend functions, and append audit history in one transaction. This includes recalculating a previously resolved report if a clearing vote changes. The schema supplies integrity/storage only: no consensus trigger, automatic resolution, reputation update or policy activation is added. Audit persistence and the adapter are still pending.
 
 ## Pending handoff
 
-Clearing votes, audit history, contributor restrictions, complete community transactions, observation aggregation, Storage/Auth policies, and seed import remain incomplete. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. `backend/app/models.py` and `backend/app/database.py` remain placeholders. Coordinate SQLModel/PostgreSQL dependency additions with the backend owner before implementing their models/session API, then agree the adapter location and wire it through `create_app(place_repository=...)`. Existing endpoints and demo behavior are unchanged. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
+Audit history, contributor restrictions, complete community transactions, observation aggregation, Storage/Auth policies, and seed import remain incomplete. The facility columns are current values, not evidence or certification; no aggregation rule is selected here. `backend/app/models.py` and `backend/app/database.py` remain placeholders. Coordinate SQLModel/PostgreSQL dependency additions with the backend owner before implementing their models/session API, then agree the adapter location and wire it through `create_app(place_repository=...)`. Existing endpoints and demo behavior are unchanged. The alternate, unmerged remote `feat/database-foundation` migration also creates campuses and entrances; do not combine it unchanged with these migrations accepted through PR #11.
 
 The database owner also owns `backend/app/models.py`, `backend/app/database.py`, and `seed/`. The backend owner owns API schemas and service logic; agree fields and session interfaces before either side implements them.
 
