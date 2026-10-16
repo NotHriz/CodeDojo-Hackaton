@@ -5,8 +5,8 @@ Backend/API and integration documentation are implemented. Frontend, Supabase mi
 ## Current verification
 
 - Earlier authentication, chat, community, explicit local demo, and CI PRs have merged. There is no remaining stacked merge queue.
-- 142 backend tests pass locally; dependency checks pass. One existing Starlette test-client HTTPX deprecation warning remains.
-- Tests use generated EC/RSA signatures, mocked providers, and test repositories. No paid DeepSeek calls, real Supabase access, deployment, or frontend integration occurred during this verification.
+- 148 backend tests pass locally; dependency checks pass. One existing Starlette test-client HTTPX deprecation warning remains.
+- Tests use generated EC/RSA signatures, mocked providers, and test repositories. The current browsing slice also passes disposable PostgreSQL API and Vue browser checks with fictional fixtures. No paid DeepSeek calls, shared Supabase access or deployment occurred.
 - Review regressions cover mixed search/detail calls, maximum-length answer/history round trips, malformed provider JSON, and report/clearance history transitions.
 - The community test adapter now preserves resolved reports after original-report votes and recomputes status when clearing support changes. This does not demonstrate SQL concurrency or transactional correctness.
 
@@ -14,7 +14,7 @@ Backend/API and integration documentation are implemented. Frontend, Supabase mi
 
 Start with the [building adapter](contracts/places.md), then the [community adapter](contracts/community.md). You own models, sessions, Supabase schema/policies, and seed/imports. Agree field mappings and implement real transactions/unique keys before connecting writes.
 
-The composition root accepts `place_repository` and `community_repository`; credentials alone do not create these adapters. Disconnected features return 503. The explicit development demo supplies fictional buildings only and cannot exercise community persistence. Building warnings must be joined from actual unresolved reports.
+The composition root accepts explicit `place_repository` and `community_repository` injections. Without a place injection, `DATABASE_URL` now creates the live PostgreSQL place adapter; migrated tables/views and checked campus data must already exist. Community persistence remains disconnected and returns 503. The explicit development demo supplies fictional buildings only and cannot exercise community persistence. Building warnings must be joined from actual unresolved reports.
 
 Before enabling votes, jointly agree thresholds and how policy/version snapshots are persisted with votes and history. The current `TrustPolicy` has no version field and no active numerical default; this review does not invent either. Reputation learning, expiry/reopening, and collusion resistance remain incomplete.
 
@@ -28,7 +28,7 @@ Treat 401/403/409/422/429/502/503 as explicit UI states. Never substitute silent
 
 `GET /api/health` checks process liveness only. Before declaring the product ready:
 
-1. Connect the building adapter; verify real campus list/details, unknown facilities, and warnings. Declare fictional demo mode if using it.
+1. The building adapter is connected and verified locally with disposable fixtures; verify checked real campus list/details, unknown facilities, and warnings after deployment. Declare fictional demo mode if using it.
 2. Test real Supabase sign-in and `/api/auth/me`, plus unsigned and forbidden contribution requests.
 3. With the community adapter and agreed policy, submit a report, retry its idempotency key, and verify one persisted report/history event. Test distinct voters, original-report votes after resolution, and reversed clearing votes using real transactions.
 4. Confirm unresolved reports appear in building warnings and chatbot sources. Verify a corroborated clearance removes the active warning while preserving history.

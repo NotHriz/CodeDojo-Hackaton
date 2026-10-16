@@ -6,11 +6,15 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
-Ten PostgreSQL migrations are merged through [PR #22](https://github.com/NotHriz/CodeDojo-Hackaton/pull/22). They provide fourteen backend-only tables and four backend-only views. These are versioned schema definitions, not a connected application database. No shared Supabase project was linked or migrated by this work, and no real campus records were imported.
+Eleven PostgreSQL migrations are merged through [PR #23](https://github.com/NotHriz/CodeDojo-Hackaton/pull/23), providing fourteen backend-only tables and seven backend-only views. No shared Supabase project was linked or migrated and no real campus records were imported.
 
-Seed preparation PR #21 and place-record PR #22 are merged. The proposed `feat/database-community-records` change adds an eleventh migration with three backend-only community-record views and SQL/backend-schema checks. It awaits review and is not merged, deployed, or connected to a runtime repository.
+The current `feat/connect-building-browsing` change connects `DATABASE_URL` to operation-scoped SQLModel sessions and `PostgresPlaceRepository` in `create_app`. Building list/details read persisted facilities, evidence and unresolved warnings from `public.place_detail_records`. Explicit injected repositories take precedence. Database failure never activates demo fixtures; no schema creation runs at startup.
 
-`backend/app/models.py` and `backend/app/database.py` remain placeholders. No real place/community repository is connected. Database credentials alone do not create an adapter. No trust policy or observation aggregation rule is activated, and no SQL trigger derives report status.
+The user authorized this integration slice across database files, backend composition/services/dependencies, and frontend details loading. API contracts are unchanged. Building details and active warnings now remain visible when the separate reports endpoint returns 503. Ownership returns to the existing area owners after this task.
+
+Community mutations still require a real transactional repository and reviewed trust thresholds/versioning. No policy or observation aggregation rule is activated and no SQL trigger derives report status. This task adds no migration.
+
+Verification: 148 backend tests and the frontend production build pass. The disposable PostgreSQL runner passes all eleven SQL suites, ten seed tests, projection checks and the configured runtime HTTP checks under service-role permissions. Runtime checks cover persisted list/details, app recreation, unknown facilities, warnings, campus filtering, pagination, missing IDs, connection release and sanitized database failure with demo enabled. A final full-suite run exposed an existing equal-timestamp history fixture failure (147 passed, one failed); the test fixture now assigns strictly increasing event times, and the final full rerun passes all 148 tests with dependency checks clean. The real Vue browser smoke check also passes: stored list/details and warnings remain visible despite reports 503, retry works, refresh preserves results and unknown facilities do not match required filters. All records used here are fictional test fixtures in an isolated local cluster.
 
 ## Migration inventory
 
@@ -28,7 +32,7 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261017000100_contributor_state.sql` | Private current eligibility, neutral/bounded weight, explicit restriction reason | Merged, PR #19 |
 | `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Merged, PR #20 |
 | `20261017000300_place_detail_records.sql` | Complete public place-detail record projection | Merged, PR #22 |
-| `20261017000400_community_records.sql` | Public report/clearing/history DTO projections with private query access | Proposed on task branch; not merged |
+| `20261017000400_community_records.sql` | Public report/clearing/history DTO projections with private query access | Merged, PR #23 |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 
@@ -36,9 +40,9 @@ The alternate remote `feat/database-foundation` branch uses another places schem
 
 ## Backend integration order
 
-1. Agree SQLModel/PostgreSQL dependencies and their pinned manifests with the backend owner. User 3 owns models/session implementation; dependency manifests, service logic, composition wiring and API contracts require the backend owner's scoped handoff. Connections must not open at module import time.
-2. Implement models/session management and agree the adapter location/lifecycle. Own and close sessions per operation/request; return fully validated DTOs rather than expired/lazy ORM objects. Database failures must propagate, not become empty successful results or demo data.
-3. Implement the read-only [PlaceRepository](contracts/places.md). Map building identity to `place_id` where required, join campus identity, preserve unknown facilities and null observation dates, and order evidence by position. Agree how current facility summaries are maintained; do not invent a latest-observation rule. Join actual unresolved reports into active warnings and exclude resolved reports.
+1. Implemented under the user-authorized scoped handoff: SQLModel/Psycopg dependencies and pinned manifests. User 3 owns models/session implementation; dependency manifests, service logic, composition wiring and API contracts require the backend owner's scoped handoff. Connections must not open at module import time.
+2. Implemented in the current browsing task: SQLModel models, lazy PostgreSQL engine, operation-scoped sessions and validated place DTOs. Database failures propagate as sanitized HTTP errors.
+3. Implemented: the read-only [PlaceRepository](contracts/places.md) uses the persisted place-detail view. Map building identity to `place_id` where required, join campus identity, preserve unknown facilities and null observation dates, and order evidence by position. Agree how current facility summaries are maintained; do not invent a latest-observation rule. Join actual unresolved reports into active warnings and exclude resolved reports.
 4. Implement transactional contributor eligibility checks plus audit writes before enabling community writes. Agree explicit trust thresholds and policy-version assignment with the backend owner: `TrustPolicy` currently has no version field, while vote/history storage requires a private version/snapshot. Stored versions in tests are illustrative, not activated settings.
 5. Implement the [CommunityRepository](contracts/community.md) transaction requirements and verify real concurrency. Inject the real adapters and reviewed policy through `create_app(...)` only after their integration checks pass. Public response shapes remain backend-owned.
 
@@ -101,7 +105,7 @@ The new verification script reads generated records from disposable PostgreSQL u
 
 ## Complete community-record handoff
 
-The proposed eleventh migration adds `clearance_public_records`, `report_public_records` and `report_history_records`. The names describe public DTO field selection only: access remains backend-service SELECT with invoker security and no browser grants. No new table, policy threshold, runtime repository, or API field is introduced.
+The merged eleventh migration adds `clearance_public_records`, `report_public_records` and `report_history_records`. The names describe public DTO field selection only: access remains backend-service SELECT with invoker security and no browser grants. No new table, policy threshold, runtime repository, or API field is introduced.
 
 Validate report `record` using `ReportResponse`, nested clearing records using `ClearanceResponse`, and history `record` using `ReportEventResponse`. Report evidence is ordered by position; clearing observations by submission time then UUID. Report reads retain resolved rows and live unweighted member counts; history uses its captured status/count snapshot, not recomputed current counts. Missing references/clearing lists stay empty arrays. Private author/voter IDs, weights, retry metadata, policy snapshots and internal clearing chronology copies stay outside JSON.
 
@@ -121,7 +125,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File supabase/tests/run-local.ps1
 
 Optional runner arguments are `-PostgresBin 'C:\path\to\postgresql\bin'` and `-Port 55440`. Minimal role fixtures exist only for the disposable cluster; never run `supabase/tests/roles.sql` against Supabase. Temporary cluster files are retained for diagnosis.
 
-Coverage includes defaults, constraints, coordinate bounds, evidence ordering/limits, foreign keys and protected deletion, scoped retry uniqueness, clearing chronology, self-vote rejection, policy/weight bounds, vote replacement, RLS and browser-role denial. Audit checks cover all four actions, equal-time ordering, independent snapshots, application append-only access, unique creation events, wrong-parent rejection, and event rollback after a failed mutation in the same SQL subtransaction. Contributor checks cover neutral defaults, required restriction reasons, explicit restoration, bounded/nonfinite weights, application deletion denial, RLS and private-field read/write denial. Place-record checks additionally cover independent child aggregation, evidence ordering, empty/null fields, resolved-warning exclusion, DTO privacy, campus defense, unknown-filter exclusion and pagination through actual backend search logic. This is not proof of a complete retry adapter, simultaneous transaction correctness, real Supabase Auth/Storage configuration, deployed persistence across restarts, or the fairness of seeded consensus. No paid AI calls or shared database writes occurred. Backend/frontend suites were not rerun; their code/interfaces are unchanged.
+Coverage includes defaults, constraints, coordinate bounds, evidence ordering/limits, foreign keys and protected deletion, scoped retry uniqueness, clearing chronology, self-vote rejection, policy/weight bounds, vote replacement, RLS and browser-role denial. Audit checks cover all four actions, equal-time ordering, independent snapshots, application append-only access, unique creation events, wrong-parent rejection, and event rollback after a failed mutation in the same SQL subtransaction. Contributor checks cover neutral defaults, required restriction reasons, explicit restoration, bounded/nonfinite weights, application deletion denial, RLS and private-field read/write denial. Place-record checks additionally cover independent child aggregation, evidence ordering, empty/null fields, resolved-warning exclusion, DTO privacy, campus defense, unknown-filter exclusion and pagination through actual backend search logic. This is not proof of a complete retry adapter, simultaneous transaction correctness, real Supabase Auth/Storage configuration, deployed persistence across restarts, or the fairness of seeded consensus. No paid AI calls or shared database writes occurred. The current browsing integration additionally passes backend/frontend verification described above; public API interfaces are unchanged.
 
 ## Remaining acceptance checks
 

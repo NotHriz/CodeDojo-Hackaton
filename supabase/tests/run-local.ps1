@@ -33,6 +33,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Place record backend integration checks failed' }
     & $seedPython (Join-Path $PSScriptRoot 'verify_community_records.py') --pg-bin $PostgresBin --port $Port
     if ($LASTEXITCODE -ne 0) { throw 'Community record backend integration checks failed' }
+    & $seedPython (Join-Path $PSScriptRoot 'verify_runtime_places.py') --port $Port
+    if ($LASTEXITCODE -ne 0) { throw 'Runtime building API integration checks failed' }
 } finally {
     if ($started) {
         Invoke-PostgresTool 'pg_ctl' @('-D', $clusterPath, '-m', 'fast', '-w', 'stop')
