@@ -12,9 +12,13 @@ Explicit local demo option: with `APP_ENV=development` and `DEMO_DATA_ENABLED=tr
 }
 ```
 
-Limits: message 1–1000 characters after trimming, up to six history messages of 1–1000 characters each with only `user`/`assistant` roles, optional selected building ID up to 128 characters. Unknown request fields are rejected. History is context, not authoritative evidence; do not send medical data, location traces, or unrelated chat.
+Limits: message 1–1000 characters after trimming, up to six history messages with only `user`/`assistant` roles (1–1000 characters for user messages, 1–3200 for assistant messages), optional selected building ID up to 128 characters. Unknown request fields are rejected. History is context, not authoritative evidence; do not send medical data, location traces, or unrelated chat.
+
+Generated answers are limited to 3000 characters; the response permits 3200 to accommodate the mandatory demo prefix. Valid answers can be sent back unchanged as assistant history; discard older turns to retain at most six messages.
 
 The response contains `answer`, `status` (`answered`, `clarification`, `no_matches`), `places` (building summaries), `sources` (cited building details), `applied_filters` (nullable), and `total_matches` (nullable). Place DTOs follow [places.md](places.md). Frontend must render warning/source cards and editable filters from these structured records, not parse the answer for markers or verification.
+
+When a search and detail lookup occur together, `places` contains only the search matches, rechecked against the filters after detail retrieval. `sources` may also cite a nonmatching detail record to explain its exclusion. `total_matches` is the search count, not the number of cited sources or extra detail lookups.
 
 AI can call only `search_places` and `get_place_details`. Arguments are validated with extra fields forbidden. Campus is pinned to IIUM Gombak. At most three tool calls, at most one search, at most five building records, and at most two model requests occur per user request. The second model request cannot run more tools. There are no write, voting, arbitrary SQL, URL-fetching, or web-search tools.
 

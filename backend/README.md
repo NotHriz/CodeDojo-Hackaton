@@ -38,7 +38,7 @@ Set-Location backend
 
 To generate the same report locally from `backend`, run `.venv/Scripts/python.exe -m pytest -q --junitxml=test-results.xml`. The report is ignored by Git. Workflow definition: [backend.yml](../.github/workflows/backend.yml).
 
-All 118 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
+All 135 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
 
 Authentication handoff: [contracts/auth.md](../contracts/auth.md). Set `SUPABASE_URL`, configure ES256/RS256 signing keys in Supabase, and send bearer tokens to `/api/auth/me`. Only the verified user UUID is returned. Legacy HS256 tokens are unsupported; immediate token revocation and live contribution restrictions are not implemented.
 
@@ -92,7 +92,7 @@ When creating the backend service, set root directory `backend`, build command `
 | `app/main.py` | Application factory, error handling, middleware, and router registration |
 | `app/config.py` | Environment settings and explicit origin validation |
 | `app/models.py` | Persistence models agreed with the database teammate |
-| `app/schemas.py` | Foundation response schemas; domain/AI contracts not yet implemented |
+| `app/schemas.py` | Public health/error and building DTOs; chat and community DTOs live in their service modules |
 | `app/database.py` | Connection/session management; no import-time external connections |
 | `app/routers/` | Places, reports, votes, clearance observations, identity, and chat endpoints |
 | `app/services/` | Query logic, community aggregation, trust rules, and DeepSeek tool orchestration |

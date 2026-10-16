@@ -19,10 +19,10 @@ The user requested an explicit local chatbot demo before database integration. `
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
 - Akses Campus is the working project name. IIUM Gombak and English-only initial UI are confirmed; exact collection boundaries remain to be chosen.
-- Backend foundation, building discovery, Supabase JWT verification, DeepSeek tool orchestration, and signed-in community routes/configurable trust functions are implemented with 118 passing tests. Real database adapters, provider configuration, and numerical trust-policy activation remain pending; disconnected routes return explicit 503s. No runtime mocks, paid AI calls, database-owned changes, or frontend changes were introduced. [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) records review order and remaining integration work.
+- Backend foundation, building discovery, Supabase JWT verification, DeepSeek tool orchestration, and signed-in community routes/configurable trust functions are implemented with 135 passing tests. Real database adapters, provider configuration, and numerical trust-policy activation remain pending; disconnected routes return explicit 503s. Fictional runtime data is available only through the explicit development demo flag; no paid AI calls, database-owned changes, or frontend changes were made during automated verification. [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) records verification and remaining integration work.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
 - Hosting is agreed: Netlify Free frontend, Render Free Python backend, and Supabase PostgreSQL/Auth/Storage. Accounts, credentials, and deployments are not configured yet.
-- The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Exact schemas remain to be finalized.
+- The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Implemented backend schemas are documented in contracts/chat.md; teammate integration review remains pending.
 - Public browsing and signed-in reporting/voting are confirmed. Community voting replaces the previous dedicated reviewer design. Internal reliability scores influence bounded vote weights; the algorithm remains experimental and must be specified before coding.
 - The team will collect initial building observations by walking around campus. No intended-user interviews have happened yet.
 - Team ownership is confirmed by function: teammate 1 frontend, the user primarily backend, teammate 3 database. Names remain unspecified.
@@ -208,7 +208,7 @@ Implement eligibility checks, duplicate protection, capped weights, deterministi
 
 ### AI chatbot scope and implementation contract
 
-The chatbot is a planned MVP feature. Build the place-query API and normal filters first, then reuse their logic through model tools. It should help users complete campus decisions and visibly interact with the map.
+The backend chatbot and place-query API are implemented and reuse the same filtering rules. Connect the real database adapter and frontend next. It should help users complete campus decisions and visibly interact with the map.
 
 | Capability | Tool | Expected behavior |
 | --- | --- | --- |
@@ -218,7 +218,7 @@ The chatbot is a planned MVP feature. Build the place-query API and normal filte
 
 Architecture: `Vue chat panel -> POST /api/chat -> AI proposes an allowed tool -> backend validates and executes it -> database evidence -> grounded answer and structured UI results`.
 
-Proposed request fields are `message`, bounded conversation context, and optional selected place ID. Proposed response fields are `answer`, `places`, `sources`, `applied_filters`, and optional `draft_report`. Finalize exact schemas with teammates; no request/response implementation exists yet. The frontend should render markers and source cards from validated backend records rather than parsing model prose.
+Implemented request fields are `message`, bounded `history`, and optional `selected_place_id`. Responses contain `data_mode`, `answer`, `status`, `places`, `sources`, `applied_filters`, and `total_matches`; see [the chat contract](contracts/chat.md) for limits. Report drafting remains unimplemented. The frontend should render markers and source cards from validated backend records rather than parsing model prose.
 
 Implementation rules:
 
@@ -231,7 +231,7 @@ Implementation rules:
 - Keep writes outside the initial chatbot tools. Report drafting does not submit anything. Explicit signed-in submission uses `POST /api/reports` and starts unverified. The AI cannot vote, change reputation, or set status; the backend derives community status.
 - Keep manual filters and details usable during AI failures. Show an explicit system error and retry option, preserving the query. Do not invent default accessibility answers or simulate a successful AI response. Distinguish an AI outage from a backend outage.
 - Limit input/context size, tool iterations, result count, request rate, and provider timeout. Use DeepSeek's recommended `deepseek-flash` with thinking disabled. The user's approximately US$2 balance supports controlled testing/demo usage; AI charges are separate from map charges. Current model/rate references, checked 16 October 2026: [pricing](https://api-docs.deepseek.com/quick_start/pricing/), [thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/). Recheck before integration and log token usage without logging sensitive raw messages.
-- Keep `AI_API_KEY` backend-only and configure `AI_MODEL` there. These are proposed configuration names, not existing settings. Do not send disability histories, exact user location, or unrelated records to the provider. Avoid persistent raw chat storage by default; document any retention decision.
+- Keep `AI_API_KEY` backend-only and configure `AI_MODEL` there. These are implemented backend settings. Do not send disability histories, exact user location, or unrelated records to the provider. Avoid persistent raw chat storage by default; document any retention decision.
 - Keep the chat panel keyboard accessible, provide a labelled input and announced response/loading state, and preserve focus when map results change.
 
 No vector database, model training, agent framework, or open-ended web browsing is required for this MVP. Structured queries over the small campus dataset are sufficient.

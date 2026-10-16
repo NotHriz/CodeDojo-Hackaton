@@ -37,7 +37,7 @@ class Places:
 
 
 class Store:
-    """Implements the adapter contract in memory for route tests, not production."""
+    """Single-threaded lifecycle test adapter; it does not prove SQL atomicity."""
 
     def __init__(self):
         self.states, self.records, self.votes, self.clearances, self.clearance_votes, self.keys = {}, {}, {}, {}, {}, {}
@@ -59,6 +59,28 @@ class Store:
     def list_history(self, report_id):
         return self.history
 
+    def append_event(self, report, previous_status, action):
+        self.history.append(ReportEventResponse(
+            id=uuid4(), report_id=report.id, occurred_at=datetime.now(timezone.utc),
+            action=action, previous_status=previous_status, new_status=report.status,
+            community=report.community.model_copy(deep=True),
+        ))
+
+    def refresh_report(self, report_id, policy, action):
+        report = self.records[report_id]
+        observations = [item.public for item in self.clearances.values() if item.report_id == report_id]
+        status, counts = derive_report_status(
+            [vote for (rid, _), vote in self.votes.items() if rid == report_id],
+            author_id=report.author_id, policy=policy,
+            clearance_states=[item.status for item in observations],
+        )
+        result = ReportRecord(report.public.model_copy(update={
+            "status": status, "community": counts, "clearance_observations": observations,
+        }), report.author_id)
+        self.records[report_id] = result
+        self.append_event(result.public, report.public.status, action)
+        return result
+
     def create_report(self, author_id, body, submitted_at, key):
         key = ("report", author_id, key)
         encoded = body.model_dump_json()
@@ -70,16 +92,16 @@ class Store:
         report = ReportResponse(id=uuid4(), campus_id="iium-gombak", submitted_at=submitted_at, **body.model_dump())
         result = ReportRecord(report, author_id)
         self.records[report.id] = result
+        self.history.append(ReportEventResponse(
+            id=uuid4(), report_id=report.id, occurred_at=submitted_at,
+            action="report_created", new_status=ReportStatus.UNVERIFIED,
+        ))
         self.keys[key] = (encoded, result)
         return result
 
     def cast_vote(self, report_id, voter_id, stance, weight, policy):
         self.votes[(report_id, voter_id)] = VoteSnapshot(voter_id, stance, weight)
-        report = self.records[report_id]
-        status, counts = aggregate_votes([v for (rid, _), v in self.votes.items() if rid == report_id], author_id=report.author_id, policy=policy)
-        updated = ReportRecord(report.public.model_copy(update={"status": status, "community": counts}), report.author_id)
-        self.records[report_id] = updated
-        return updated
+        return self.refresh_report(report_id, policy, "vote_updated")
 
     def create_clearance(self, report_id, author_id, body, submitted_at, key):
         key = ("clearance", report_id, author_id, key)
@@ -92,6 +114,12 @@ class Store:
         observation = ClearanceResponse(id=uuid4(), submitted_at=submitted_at, **body.model_dump())
         result = ClearanceRecord(observation, author_id, report_id)
         self.clearances[observation.id] = result
+        report = self.records[report_id]
+        updated_report = report.public.model_copy(update={
+            "clearance_observations": [item.public for item in self.clearances.values() if item.report_id == report_id],
+        })
+        self.records[report_id] = ReportRecord(updated_report, report.author_id)
+        self.append_event(updated_report, report.public.status, "clearance_submitted")
         self.keys[key] = (encoded, result)
         return result
 
@@ -105,12 +133,7 @@ class Store:
         status, counts = aggregate_votes([v for (cid, _), v in self.clearance_votes.items() if cid == clearance_id], author_id=observation.author_id, policy=policy)
         updated = ClearanceRecord(observation.public.model_copy(update={"status": status, "community": counts}), observation.author_id, report_id)
         self.clearances[clearance_id] = updated
-        report = self.records[report_id]
-        observations = [item.public for item in self.clearances.values() if item.report_id == report_id]
-        report_status, report_counts = derive_report_status([v for (rid, _), v in self.votes.items() if rid == report_id], author_id=report.author_id, policy=policy, clearance_states=[item.status for item in observations])
-        result = ReportRecord(report.public.model_copy(update={"status": report_status, "community": report_counts, "clearance_observations": observations}), report.author_id)
-        self.records[report_id] = result
-        return result
+        return self.refresh_report(report_id, policy, "clearance_vote_updated")
 
 
 def headers(user=AUTHOR, *, key=None):
@@ -322,3 +345,60 @@ def test_history_cannot_access_missing_report_or_invalid_pagination(connected):
     client, store = connected
     assert client.get(f"/api/reports/{uuid4()}/history").status_code == 404
     assert client.get(f"/api/reports/{store.original.public.id}/history?limit=101").status_code == 422
+
+
+def corroborate_clearance(client, store):
+    report_id = store.original.public.id
+    response = client.post(
+        f"/api/reports/{report_id}/clearance-observations",
+        json={"description": "Clear now", "observed_at": (store.now - timedelta(minutes=1)).isoformat()},
+        headers=headers(key=uuid4()),
+    )
+    assert response.status_code == 201
+    clearance_id = response.json()["id"]
+    voters = [uuid4() for _ in range(3)]
+    url = f"/api/reports/{report_id}/clearance-observations/{clearance_id}/votes"
+    for voter in voters:
+        response = client.post(url, json={"stance": "corroborate"}, headers=headers(voter))
+        assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    return url, voters
+
+
+def test_resolution_survives_later_vote_on_original_report(connected):
+    client, store = connected
+    corroborate_clearance(client, store)
+    report_id = store.original.public.id
+    response = client.post(f"/api/reports/{report_id}/votes", json={"stance": "corroborate"}, headers=headers(uuid4()))
+    assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    history = client.get(f"/api/reports/{report_id}/history").json()["items"]
+    assert history[-1]["previous_status"] == history[-1]["new_status"] == "resolved"
+
+
+def test_create_and_idempotent_retry_record_exactly_one_history_event(connected):
+    client, store = connected
+    key, body = uuid4(), report_body()
+    first = client.post("/api/reports", json=body, headers=headers(key=key))
+    client.post("/api/reports", json=body, headers=headers(key=key))
+    report_id = first.json()["id"]
+    history = client.get(f"/api/reports/{report_id}/history").json()
+    assert history["total"] == 1
+    assert history["items"][0]["action"] == "report_created"
+    assert history["items"][0]["occurred_at"] == first.json()["submitted_at"]
+
+
+def test_clearing_vote_reversal_restores_original_corroboration_and_records_history(connected):
+    client, store = connected
+    report_id = store.original.public.id
+    for _ in range(3):
+        client.post(f"/api/reports/{report_id}/votes", json={"stance": "corroborate"}, headers=headers(uuid4()))
+    url, voters = corroborate_clearance(client, store)
+    response = client.post(url, json={"stance": "dispute"}, headers=headers(voters[0]))
+    assert response.status_code == 200
+    assert response.json()["status"] == "community_corroborated"
+    assert response.json()["clearance_observations"][0]["status"] == "disputed"
+    history = client.get(f"/api/reports/{report_id}/history").json()["items"]
+    assert history[-1]["action"] == "clearance_vote_updated"
+    assert history[-1]["previous_status"] == "resolved"
+    assert history[-1]["new_status"] == "community_corroborated"

@@ -3,7 +3,10 @@
 from fastapi import APIRouter, HTTPException, Request
 
 from app.schemas import ErrorResponse
-from app.services.chat import AIUnavailable, ChatRequest, ChatResponse, InvalidAIResponse, run_chat
+from app.services.chat import (
+    AIUnavailable, ChatRequest, ChatResponse, DEMO_NOTICE, InvalidAIResponse,
+    MAX_ASSISTANT_MESSAGE_CHARS, run_chat,
+)
 
 router = APIRouter(prefix="/chat", tags=["assistant"])
 
@@ -28,7 +31,9 @@ def chat(body: ChatRequest, request: Request) -> ChatResponse:
         result = run_chat(body, provider, repository, demo_mode=demo_mode)
         if demo_mode:
             result.data_mode = "demo"
-            result.answer = "LOCAL DEMO — fictional buildings, not verified campus information.\n" + result.answer
+            result.answer = DEMO_NOTICE + result.answer
+            if len(result.answer) > MAX_ASSISTANT_MESSAGE_CHARS:
+                raise InvalidAIResponse()
         return result
     except AIUnavailable:
         raise HTTPException(503, "The AI assistant is temporarily unavailable. Please retry or use the map and filters.") from None
