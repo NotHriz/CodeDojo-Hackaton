@@ -11,12 +11,14 @@ from starlette.exceptions import HTTPException
 from app.config import Settings
 from app.routers.auth import router as auth_router
 from app.routers.chat import router as chat_router
+from app.routers.community import router as community_router
 from app.routers.health import router as health_router
 from app.routers.places import router as places_router
 from app.schemas import ErrorResponse
 from app.services.places import PlaceRepository
 from app.services.auth import SupabaseTokenVerifier, TokenVerifier
 from app.services.chat import ChatBudget, ChatProvider, DeepSeekProvider
+from app.services.community import CommunityRepository, TrustPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,9 @@ def create_app(
     token_verifier: TokenVerifier | None = None,
     chat_provider: ChatProvider | None = None,
     chat_budget: ChatBudget | None = None,
+    community_repository: CommunityRepository | None = None,
+    trust_policy: TrustPolicy | None = None,
+    contribution_budget: ChatBudget | None = None,
 ) -> FastAPI:
     """Build the API without opening database connections or contacting providers."""
     settings = settings if settings is not None else Settings()
@@ -47,6 +52,11 @@ def create_app(
     )
     api.state.settings = settings
     api.state.place_repository = place_repository
+    api.state.community_repository = community_repository
+    api.state.trust_policy = trust_policy
+    api.state.contribution_budget = contribution_budget if contribution_budget is not None else ChatBudget(
+        per_minute=5, per_day=500
+    )
     api.state.token_verifier = token_verifier if token_verifier is not None else (
         SupabaseTokenVerifier(settings.supabase_url) if settings.supabase_url else None
     )
@@ -59,7 +69,7 @@ def create_app(
 
     @api.exception_handler(HTTPException)
     async def handle_http_error(request: Request, exc: HTTPException):
-        code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed", 429: "rate_limited", 502: "upstream_error", 503: "service_unavailable"}.get(
+        code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed", 409: "conflict", 422: "validation_error", 429: "rate_limited", 502: "upstream_error", 503: "service_unavailable"}.get(
             exc.status_code, "request_failed"
         )
         message = exc.detail if isinstance(exc.detail, str) else "Request failed."
@@ -87,12 +97,14 @@ def create_app(
         allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
+        expose_headers=["Retry-After"],
     )
     api.include_router(health_router, prefix="/api")
     api.include_router(places_router, prefix="/api")
     api.include_router(auth_router, prefix="/api")
     api.include_router(chat_router, prefix="/api")
+    api.include_router(community_router, prefix="/api")
     return api
 
 

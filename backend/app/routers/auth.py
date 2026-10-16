@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from app.schemas import ErrorResponse
 
 from app.services.auth import (
     AuthenticatedUser,
@@ -14,7 +15,9 @@ from app.services.auth import (
 )
 
 bearer = HTTPBearer(auto_error=False)
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(prefix="/auth", tags=["authentication"], responses={
+    401: {"model": ErrorResponse}, 503: {"model": ErrorResponse},
+})
 
 
 def require_user(
