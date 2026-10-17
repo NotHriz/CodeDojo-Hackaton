@@ -15,7 +15,7 @@
 /* COLOUR-BLIND MODE: swaps green/red for blue/orange. Set by useA11y.js via data-cb. */
 :root[data-cb="on"] { --color-yes: #00508f; --color-no: #b34700; }
 
-body { @apply bg-navy font-sans text-ink; }
+body { @apply bg-brand font-sans text-ink; }
 .font-display { font-family: "Comfortaa", "Atkinson Hyperlegible", sans-serif; } /* big titles */
 
 /* YELLOW STRIPES: only used by HeroShell (Home, About, Log in). Change the colour or the 12px/28px widths here. */

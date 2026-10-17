@@ -18,7 +18,7 @@ const TILES = [['📍', 'Search the map'], ['✔', 'Check access'], ['👥', 'Vo
       <p class="mt-2 max-w-sm">{{ SITE_NAME }} helps people with disabilities check step-free entrances, lifts, toilets, braille and more at IIUM Gombak before they visit.</p>
       <div class="mt-5 flex flex-wrap gap-3">
         <RouterLink to="/about" class="pill-btn">Read more <span aria-hidden="true">→</span></RouterLink>
-        <RouterLink :to="auth.user ? '/explore' : '/login'" class="pill-btn bg-white !text-brand">{{ auth.user ? 'Explore' : 'Log in to explore' }}</RouterLink>
+        <RouterLink :to="auth.user ? '/explore' : '/login'" class="pill-btn bg-white !text-brand">{{ auth.user ? 'Explore' : 'Log in' }}</RouterLink>
       </div>
       <ul class="mt-8 flex flex-wrap gap-4">
         <li v-for="[icon, label] in TILES" :key="label" class="grid size-28 place-items-center rounded-2xl border border-white/50 p-2 text-center">

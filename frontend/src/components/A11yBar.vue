@@ -12,7 +12,7 @@ const open = ref(false)
       Accessibility settings
     </button>
     <div v-show="open" id="a11y-panel" role="group" aria-label="Accessibility settings"
-      class="card absolute right-0 z-[1100] mt-2 w-80 max-w-[85vw] space-y-3 text-ink">
+      class="card absolute right-0 z-[3000] mt-2 w-80 max-w-[85vw] space-y-3 text-ink">
       <!-- TEXT SIZE slider: 80% to 200%. Change min/max/step to alter the range. -->
       <div>
         <label for="scale" class="font-bold">Text size: {{ a11y.scale }}%</label>

@@ -14,7 +14,7 @@ const STEPS = [
 <template>
   <HeroShell>
     <template #left>
-      <h1 class="font-display text-5xl lowercase sm:text-7xl">about</h1>
+      <h1 class="font-display text-5xl lowercase sm:text-7xl">About</h1>
       <h2 class="mt-10 font-display text-2xl">Why {{ SITE_NAME }} exists</h2>
       <p class="mt-2 max-w-sm">{{ SITE_NAME }} is a campus accessibility finder for IIUM Gombak. It covers physical, vision, hearing and cognitive needs. Information comes from the community and is never certified. Unknown stays marked as unknown.</p>
     </template>
