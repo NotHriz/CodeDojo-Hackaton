@@ -9,5 +9,6 @@ def isolate_integration_environment(monkeypatch):
         "APP_ENV": "test", "DEMO_DATA_ENABLED": "false",
         "AI_API_KEY": "", "SUPABASE_URL": "", "DATABASE_URL": "",
         "SUPABASE_SERVICE_ROLE_KEY": "", "AI_MODEL": "deepseek-flash",
+        "COMMUNITY_POLICY_VERSION": "disabled",
     }.items():
         monkeypatch.setenv(name, value)

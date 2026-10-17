@@ -1,3 +1,9 @@
+# Versioned policy activation follow-up
+
+The team agreed experimental `iium-gombak-pilot-v1` (3 supporters, support weight 3, exact 67% support share, maximum individual weight 2; everyone starts at 1). The selector and snapshot tests are implemented on `feat/versioned-trust-policy`, prepared for PR review. Local ignored settings select it; restart an existing backend to reload. Committed configuration defaults to disabled. No promotion algorithm, agreement rewards, disagreement penalties or shared database writes were introduced. Shared deployment/runtime verification remains pending. See the [policy contract](contracts/community.md#trust-calculation).
+
+The transactional repository from PR #28 is merged; its policy version binding is already implemented. The older implementation/deployment notes below are historical.
+
 # Current backend implementation status
 
 The transactional PostgreSQL CommunityRepository is implemented on `feat/transactional-community`, prepared for PR review and not merged or deployed. Configured building/community adapters share the lazy database engine. All 164 backend tests pass with disposable PostgreSQL, including concurrency and atomic rollback; no shared writes or paid AI requests occurred. See [backend setup](backend/README.md#transactional-community-persistence) and [database status](DATABASE_HANDOFF.md#transactional-community-follow-up).

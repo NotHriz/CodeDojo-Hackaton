@@ -24,6 +24,7 @@ from app.services.community import CommunityRepository, TrustPolicy
 from app.services.demo_places import DemoPlaceRepository
 from app.services.postgres_places import PostgresPlaceRepository
 from app.services.postgres_community import PostgresCommunityRepository
+from app.services.trust_policies import configured_policy, validate_named_binding
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,12 @@ def create_app(
 ) -> FastAPI:
     """Build the API without opening database connections or contacting providers."""
     settings = settings if settings is not None else Settings()
+    # Explicitly supplied policies keep precedence over environment selection.
+    if trust_policy is None and trust_policy_version is None:
+        binding = configured_policy(settings.community_policy_version)
+        if binding is not None:
+            trust_policy, trust_policy_version = binding.policy, binding.version
+    validate_named_binding(trust_policy, trust_policy_version)
     # Explicit real adapters always take precedence; failures never trigger demo data.
     effective_places = place_repository
     database = None
@@ -92,6 +99,7 @@ def create_app(
     api.state.demo_mode = demo_mode
     api.state.community_repository = community_repository
     api.state.trust_policy = trust_policy
+    api.state.trust_policy_version = trust_policy_version
     api.state.contribution_budget = contribution_budget if contribution_budget is not None else ChatBudget(
         per_minute=5, per_day=500
     )

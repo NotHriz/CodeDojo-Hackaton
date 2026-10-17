@@ -6,6 +6,16 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
+### Agreed versioned pilot policy, 17 October 2026
+
+The team agreed `iium-gombak-pilot-v1`: minimum supporters 3, minimum support weight 3, support ratio 0.67 exactly, maximum individual weight 2. Everyone starts at 1; a higher-weight assignment process remains unagreed and no automatic reputation updates are introduced. Identical rules apply to clearing claims. Use ?community corroborated,? without an accuracy or safety guarantee.
+
+The policy-selection implementation is on `feat/versioned-trust-policy`, prepared for PR review and not merged/deployed. `COMMUNITY_POLICY_VERSION` defaults to disabled; the ignored local configuration explicitly selects the agreed version. Normal startup binds the version and frozen thresholds to both API and transactional adapter. Named-version threshold overrides fail; unknown version settings fail; existing incompatible stored snapshots continue to block voting. No schema or shared-data changes occur. Restart existing backend processes to reload local settings. Shared policy deployment still requires migrated schema and runtime verification.
+
+PR #28's repository version binding is merged. This follow-up supplies the missing normal-startup selector and team agreement; earlier pending-version statements below are historical.
+
+Verification: all 181 backend tests pass with disposable PostgreSQL 17.11 and no skips; dependency checks pass. Tests verify exact report-vote, clearing-vote and history version/threshold snapshots, the strict 67% boundary, named-version override rejection, disabled/unknown configuration and injection precedence. No shared database writes occurred.
+
 ### Connectivity restored, 17 October 2026
 
 After the user confirmed a network retry, the configured Supabase Session pooler connected successfully. The Auth project and project-qualified pooler username agree. Installed the existing pinned database dependencies and corrected the ignored local `SUPABASE_URL` to its project origin; added `sslmode=require` to the ignored database URL. Psycopg confirms client TLS is active. No credentials were printed or committed.

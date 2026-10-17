@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     ai_max_output_tokens: int = Field(default=600, ge=100, le=1200)
     chat_requests_per_minute: int = Field(default=5, ge=1, le=60)
     chat_requests_per_day: int = Field(default=100, ge=1, le=1000)
+    community_policy_version: Literal["disabled", "iium-gombak-pilot-v1"] = "disabled"
 
     @field_validator("supabase_url")
     @classmethod
