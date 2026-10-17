@@ -153,6 +153,22 @@ class ContributionDenied(Exception):
     pass
 
 
+class ContributionTargetMissing(Exception):
+    pass
+
+
+class InvalidObservationTime(Exception):
+    pass
+
+
+class PolicyUnavailable(Exception):
+    pass
+
+
+class PolicyConflict(Exception):
+    pass
+
+
 class CommunityRepository(Protocol):
     """Persistence handoff; mutation methods MUST enforce the atomic rules in docs."""
 

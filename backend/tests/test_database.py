@@ -8,6 +8,7 @@ from app.config import Settings
 from app.database import Database
 from app.main import create_app
 from app.services.postgres_places import PostgresPlaceRepository
+from app.services.postgres_community import PostgresCommunityRepository
 
 
 @pytest.mark.parametrize("url", ["sqlite:///data.db", "not a URL", "mysql://user:secret@host/db"])
@@ -22,6 +23,9 @@ def test_configured_database_takes_precedence_without_import_time_connection():
         app = create_app(Settings(_env_file=None, database_url="postgresql://user:secret@localhost/db",
                                   demo_data_enabled=True))
         assert isinstance(app.state.place_repository, PostgresPlaceRepository)
+        assert isinstance(app.state.community_repository, PostgresCommunityRepository)
+        assert app.state.community_repository.database is app.state.place_repository.database
+        assert app.state.trust_policy is None
         assert not app.state.demo_mode
     app.state.place_repository.database.close()
 

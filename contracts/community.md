@@ -1,6 +1,6 @@
 # Community reports and votes — backend handoff v0.1
 
-Backend routes, input validation, identity checks, limits, and deterministic trust functions are implemented. Persistence is not connected. Numeric trust thresholds are **not activated by default** and need review. This proposal does not prescribe SQL tables or claim production anti-fraud protection.
+Backend routes, input validation, identity checks, limits, and deterministic trust functions are implemented. The transactional PostgreSQL adapter is implemented and configured alongside the building adapter when DATABASE_URL is supplied; shared deployment/runtime verification remains pending. Numeric trust thresholds are **not activated by default** and need review. This proposal does not prescribe SQL tables or claim production anti-fraud protection.
 
 ## HTTP contract
 
@@ -29,7 +29,7 @@ Statuses: `unverified`, `community_corroborated`, `disputed`, `resolved`. Commun
 
 ## Trust calculation
 
-`app.services.community.TrustPolicy` requires four explicit values: `minimum_supporters` (at least two), `minimum_weight`, `support_ratio` (greater than half), and `maximum_vote_weight` (between one and two). There is no active default policy or environment switch that silently enables an unreviewed algorithm. The backend composition root must supply a reviewed policy to `create_app(trust_policy=...)`.
+`app.services.community.TrustPolicy` requires four explicit values: `minimum_supporters` (at least two), `minimum_weight`, `support_ratio` (greater than half), and `maximum_vote_weight` (between one and two). There is no active default policy or environment switch that silently enables an unreviewed algorithm. The backend composition root must supply a reviewed policy to `create_app(trust_policy=reviewed_policy, trust_policy_version=reviewed_version)`. The persisted adapter requires both; thresholds are bound to the supplied version, and incompatible existing vote snapshots return 409 rather than silently reaggregating under a changed policy.
 
 Tests use the **illustrative experimental policy**: three distinct supporters, minimum total support weight three, support ratio 0.67, and maximum individual weight two. These are test inputs, not validated production thresholds.
 
@@ -41,7 +41,7 @@ Restrictions are read through an internal `ContributorState`; unknown/new contri
 
 ## Database teammate handoff — required atomic behavior
 
-Implement `app.services.community.CommunityRepository` over your owned persistence/session layer. Inject through `create_app(community_repository=adapter, trust_policy=reviewed_policy)`. The protocol lists read/create/vote/clearance/history methods and internal record types. API inputs and public DTOs are backend-owned; SQL schema and migrations remain yours. History records use `report_created`, `vote_updated`, `clearance_submitted`, and `clearance_vote_updated` actions; return public `ReportEventResponse` objects without internal actor/weight data.
+Implement `app.services.community.CommunityRepository` over your owned persistence/session layer. Inject through `create_app(community_repository=adapter, trust_policy=reviewed_policy)`; construct the persisted adapter with the same reviewed policy and version. Default configured wiring also accepts `trust_policy_version`. The protocol lists read/create/vote/clearance/history methods and internal record types. API inputs and public DTOs are backend-owned; SQL schema and migrations remain yours. History records use `report_created`, `vote_updated`, `clearance_submitted`, and `clearance_vote_updated` actions; return public `ReportEventResponse` objects without internal actor/weight data.
 
 Every mutation must be a single transaction with the relevant report/observation locked or an equivalent concurrency-safe strategy:
 
@@ -69,3 +69,11 @@ Building adapter integration: map actual unresolved report statuses into `PlaceD
 Contribution limits are five attempts per verified user per minute and 500 globally per UTC day, process-local, reset on restart. These are demo limits, not durable/distributed spam prevention. Idempotency correctness depends on real database constraints and transactions.
 
 Tests use explicit in-memory adapters to exercise routes and backend policy functions. They do not prove real database concurrency, migration correctness, stored reliability, or real-community fairness. Those require database integration and intended-user review.
+
+## Implemented transaction adapter
+
+`app.services.postgres_community.PostgresCommunityRepository` implements the existing protocol without schema changes. Every mutation first inserts a missing neutral contributor row with ON CONFLICT DO NOTHING and locks the actual row, serializing even missing-row restriction races. Lock order is contributor, pilot building/report, then clearing target. Restriction administrators must follow that same contributor-first order and upsert restrictions rather than treating an absent row as an unlocked state.
+
+Same-actor creates serialize under that row lock before comparing the scoped retry key and SHA-256 digest; normalized UTC observation time and validated request fields are included, server submission time is excluded. Existing SQL uniqueness constraints remain the final guard. Private weights are freshly loaded under lock; the earlier route weight is not authoritative. Vote upserts, clearing/parent statuses and accepted history snapshots share one transaction. Parent locking serializes report and clearing votes, preserving other corroborated clearances on reversal. Equal-time history retains persisted sequence order without exposing the sequence publicly.
+
+Real disposable PostgreSQL tests cover competing identical/conflicting retries, concurrent distinct/repeated votes, clearing resolution/reversal, restriction races, and injected post-history failures for all four mutation types. These are local transaction checks, not real Auth/community validation or proof of shared deployment. Shared schema/permissions and an explicitly reviewed voting policy/version remain activation requirements.
