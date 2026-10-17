@@ -42,7 +42,7 @@ export const getReportHistory = (reportId, offset = 0) => request(`/api/reports/
 // stance: 'corroborate' | 'dispute'. kind: 'reports' (exists) | 'observations' (PROPOSED)
 export const castVote = (kind, id, stance) => request(`/api/${kind}/${id}/votes`, { method: 'POST', body: { stance } })
 
-// ---- PROPOSED (backend must add; see INTEGRATION.md) ----
+// ---- Facility observations ----
 export const submitObservation = (placeId, body, idem) => request(`/api/places/${encodeURIComponent(placeId)}/observations`, { method: 'POST', body, idem })
 export const uploadPhoto = async file => { const f = new FormData(); f.append('file', file); return request('/api/uploads', { method: 'POST', form: f }) } // returns { url }
 export const createTicket = body => request('/api/tickets', { method: 'POST', body })                // { category, subject, message }

@@ -1,9 +1,11 @@
 """Database-independent building query logic and the persistence handoff interface."""
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Protocol
+from uuid import UUID
 
-from app.schemas import FacilityValue, PlaceDetail, PlaceListResponse, PlaceSummary
+from app.schemas import FacilityValue, ObservationCreate, PlaceDetail, PlaceListResponse, PlaceSummary
 
 
 class PlaceRepository(Protocol):
@@ -16,6 +18,11 @@ class PlaceRepository(Protocol):
     def list_places(self, campus_id: str) -> Sequence[PlaceDetail]: ...
 
     def get_place(self, place_id: str) -> PlaceDetail | None: ...
+
+    def create_observation(
+        self, building_id: str, author_id: UUID, body: ObservationCreate,
+        idempotency_key: UUID, now: datetime,
+    ) -> PlaceDetail: ...
 
 
 def matches_place(

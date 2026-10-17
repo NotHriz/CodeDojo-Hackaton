@@ -91,6 +91,10 @@ No missing time, source, coordinate, or evidence is fabricated. All non-null tim
 
 Facility names: `step_free_entrance`, `accessible_toilet`, `designated_parking`. Values: `yes`, `no`, `unknown`. Active warning statuses: `unverified`, `community_corroborated`, `disputed`; resolved reports must not enter this active-only field. Private reliability, account secrets, and internal voting records are excluded from these DTOs.
 
+### POST /api/places/{building_id}/observations
+
+Requires a verified Supabase bearer token and an `Idempotency-Key` UUID. The body contains one of the three facility names above, a `yes`/`no`/`unknown` value, a timezone-aware `observed_at` that is not in the future, optional notes (maximum 2000 characters), and up to three HTTP(S) `evidence_urls`. The backend confirms the building, writes the observation and evidence references atomically, and returns the refreshed `PlaceDetail` with status `201`. Reusing a key with identical content returns the original result; changing its content returns `409`.
+
 ## Errors and current integration status
 
 Application errors use `{"error":{"code":"...","message":"..."}}`.

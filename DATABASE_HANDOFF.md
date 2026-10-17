@@ -6,6 +6,10 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
+### Facility observation write path, 17 October 2026
+
+The backend now provides the authenticated `POST /api/places/{building_id}/observations` flow. It validates the three agreed facility names and finite past/current observation times, writes the observation and ordered evidence in one transaction, and uses a building-scoped lock plus a durable payload digest to make retries idempotent. Migration `20261017000700_facility_observation_submissions.sql` adds the private retry ledger and removes PostgreSQL 17 `MAINTAIN` from its service-role grant. The migration is pending shared deployment and target verification; no shared observation data was written. Backend route tests pass; live Supabase write verification remains outstanding.
+
 ### PR #31 MAINTAIN correction, 17 October 2026
 
 The initial correction/audit omitted PostgreSQL 17 MAINTAIN; its clean-grant claim was incomplete. Added and applied forward migration 20261017000600_revoke_service_role_maintain.sql; the already-applied 20261017000500 file is unchanged. The correction only revokes MAINTAIN from the twelve CRUD tables, preserving data/CRUD. It conditionally executes on PostgreSQL 17+, and the audit only queries this privilege on supported server versions. [PostgreSQL privilege reference](https://www.postgresql.org/docs/17/ddl-priv.html).
@@ -95,6 +99,7 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261017000400_community_records.sql` | Public report/clearing/history DTO projections with private query access | Merged, PR #23 |
 | `20261017000500_service_role_privileges.sql` | Remove cloud-inherited TRUNCATE/REFERENCES/TRIGGER while retaining CRUD | Applied shared; correction pending PR review |
 | `20261017000600_revoke_service_role_maintain.sql` | Remove PostgreSQL 17 MAINTAIN left by the initial correction | Applied shared; correction pending PR review |
+| `20261017000700_facility_observation_submissions.sql` | Durable idempotency ledger for facility observation submissions | Implemented locally; pending shared deployment and runtime verification |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 

@@ -11,6 +11,8 @@ PR #31 follow-up: 20261017000600 revokes PostgreSQL 17 MAINTAIN missed by the ea
 
 The explicit deployment instruction applied the first eleven migrations plus the forward service-role privilege correction 20261017000500. Shared history records all thirteen and the schema/grant audit matches. The correction removes extra cloud-default TRUNCATE/REFERENCES/TRIGGER grants without changing data or intended CRUD. Role fixtures now reproduce those defaults locally. 183 backend plus five audit tests pass. This correction is applied remotely but published for PR review, not merged.
 
+The pending `20261017000700_facility_observation_submissions.sql` migration adds the private retry ledger used by the authenticated facility-observation write endpoint. It is intentionally not applied to the shared project yet; deploy it only after reviewing the migration and rerunning the target audit.
+
 No dataset has been imported. A restricted runtime credential and production hosting/Auth/provider verification remain pending. See ../DATABASE_HANDOFF.md and DEPLOYMENT_PLAN.md; older pending-deployment text below describes earlier increments.
 
 ## Migration runner

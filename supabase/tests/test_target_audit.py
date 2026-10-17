@@ -16,10 +16,10 @@ from pydantic import SecretStr
 class TargetAuditTests(unittest.TestCase):
     def test_inventory_matches_versioned_source(self):
         migrations, tables, views = inspect_target.inventory()
-        self.assertEqual(len(migrations), 13)
-        self.assertEqual(len(tables), 14)
+        self.assertEqual(len(migrations), 14)
+        self.assertEqual(len(tables), 15)
         self.assertEqual(len(views), 7)
-        self.assertEqual(len({row['version'] for row in migrations}), 13)
+        self.assertEqual(len({row['version'] for row in migrations}), 14)
         self.assertTrue(all(len(row['sha256']) == 64 for row in migrations))
 
     def test_maintain_is_checked_only_on_supported_servers(self):

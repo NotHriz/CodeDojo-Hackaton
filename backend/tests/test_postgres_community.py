@@ -338,7 +338,7 @@ def test_cloud_default_grants_are_narrowed_to_application_contract(local_databas
         AND has_table_privilege('service_role',c.oid,'SELECT')
         AND has_table_privilege('service_role',c.oid,'INSERT')
         AND has_table_privilege('service_role',c.oid,'UPDATE')
-        AND has_table_privilege('service_role',c.oid,'DELETE')""") == 12
+        AND has_table_privilege('service_role',c.oid,'DELETE')""") == 13
 
 
 def test_audit_detects_maintain_drift_on_real_postgres(local_database):

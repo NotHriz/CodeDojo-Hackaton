@@ -1,11 +1,16 @@
 """Endpoint behavior using explicit test-only persistence, never runtime seed data."""
 
+from datetime import datetime, timedelta, timezone
+from uuid import UUID, uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
-from app.schemas import PlaceDetail
+from app.schemas import FacilityObservation, PlaceDetail
+from app.services.auth import AuthenticatedUser, InvalidAccessToken
+from app.services.postgres_places import ObservationIdempotencyConflict, ObservationTargetMissing
 
 
 class TestPlaceRepository:
@@ -163,3 +168,78 @@ def test_repository_failure_does_not_become_empty_success():
             assert response.status_code == 500
             assert response.json()["error"]["code"] == "internal_error"
             assert "private-database-credential" not in response.text
+
+
+class ObservationVerifier:
+    def verify(self, token):
+        try:
+            return AuthenticatedUser(UUID(token))
+        except ValueError:
+            raise InvalidAccessToken() from None
+
+
+class ObservationWriter(TestPlaceRepository):
+    def __init__(self, records):
+        super().__init__(records)
+        self.keys = {}
+
+    def create_observation(self, building_id, author_id, body, key, now):
+        place = self.get_place(building_id)
+        if place is None:
+            raise ObservationTargetMissing()
+        payload = body.model_dump_json()
+        existing = self.keys.get((author_id, building_id, key))
+        if existing is not None:
+            if existing[0] != payload:
+                raise ObservationIdempotencyConflict()
+            return existing[1]
+        updated = place.model_copy(update={"observations": [FacilityObservation(**body.model_dump())]})
+        self.records = [updated if item.id == building_id else item for item in self.records]
+        self.keys[(author_id, building_id, key)] = (payload, updated)
+        return updated
+
+
+def observation_app():
+    settings = Settings(_env_file=None, supabase_url="")
+    return create_app(settings, place_repository=ObservationWriter([building("b", "Beta study building")]), token_verifier=ObservationVerifier())
+
+
+def observation_headers(key=None, user=None):
+    return {"Authorization": "Bearer " + str(user or uuid4()), **({"Idempotency-Key": str(key)} if key else {})}
+
+
+def valid_observation(**updates):
+    return {"facility": "step_free_entrance", "value": "yes", "observed_at": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat(), "evidence_urls": [], **updates}
+
+
+def test_observation_requires_authentication_and_idempotency_key():
+    with TestClient(observation_app()) as client:
+        assert client.post("/api/places/b/observations", json=valid_observation()).status_code == 401
+        assert client.post("/api/places/b/observations", json=valid_observation(), headers=observation_headers()).status_code == 422
+
+
+def test_observation_rejects_invalid_facility_and_future_date():
+    with TestClient(observation_app()) as client:
+        response = client.post("/api/places/b/observations", json=valid_observation(facility="lift"), headers=observation_headers(uuid4()))
+        assert response.status_code == 422
+        response = client.post("/api/places/b/observations", json=valid_observation(observed_at=(datetime.now(timezone.utc) + timedelta(minutes=1)).isoformat()), headers=observation_headers(uuid4()))
+        assert response.status_code == 422
+
+
+def test_observation_is_idempotent_and_conflicting_retry_is_rejected():
+    key = uuid4()
+    user = uuid4()
+    with TestClient(observation_app()) as client:
+        body = valid_observation()
+        first = client.post("/api/places/b/observations", json=body, headers=observation_headers(key, user))
+        second = client.post("/api/places/b/observations", json=body, headers=observation_headers(key, user))
+        conflict = client.post("/api/places/b/observations", json=valid_observation(value="no"), headers=observation_headers(key, user))
+        assert first.status_code == second.status_code == 201
+        assert first.json() == second.json()
+        assert conflict.status_code == 409
+
+
+def test_observation_missing_building_returns_not_found():
+    with TestClient(observation_app()) as client:
+        response = client.post("/api/places/missing/observations", json=valid_observation(), headers=observation_headers(uuid4()))
+        assert response.status_code == 404

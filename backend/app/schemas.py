@@ -59,6 +59,16 @@ class FacilityObservation(BaseModel):
     evidence_urls: list[HttpUrl] = Field(default_factory=list)
 
 
+class ObservationCreate(BaseModel):
+    """A signed-in contributor's facility observation."""
+
+    facility: Literal["step_free_entrance", "accessible_toilet", "designated_parking"]
+    value: FacilityValue
+    notes: str | None = Field(default=None, max_length=2000)
+    observed_at: AwareDatetime
+    evidence_urls: list[HttpUrl] = Field(default_factory=list, max_length=3)
+
+
 class PlaceSummary(BaseModel):
     id: str = Field(min_length=1, max_length=128)
     campus_id: str = Field(min_length=1, max_length=128)

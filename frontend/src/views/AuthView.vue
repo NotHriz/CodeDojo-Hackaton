@@ -34,7 +34,7 @@ const MODES = {
 
 const mode = computed(() => route.meta.mode)
 const m = computed(() => MODES[mode.value])
-const form = reactive({ identifier: '', username: '', email: '', password: '', confirm: '', remember: true })
+const form = reactive({ identifier: '', username: '', email: '', password: '', confirm: '', remember: true, agree: false })
 const error = ref('')   // red message
 const done = ref('')    // green message
 const busy = ref(false) // disables the button while waiting
@@ -50,6 +50,7 @@ const submit = () => run(async () => {
   if (m.value.fields.includes('confirm') && form.password !== form.confirm) throw new Error('Passwords do not match.')
   if (mode.value === 'login') { await logIn(form.identifier, form.password, form.remember); router.push(route.query.next || '/explore') }
   else if (mode.value === 'signup') {
+    if (!form.agree) throw new Error('Please accept the Privacy Policy and Terms of Use to continue.')
     if (await signUp(form)) done.value = 'Account created. Check your email to confirm it, then log in.'
     else router.push('/explore')
   }
@@ -85,6 +86,31 @@ const submit = () => run(async () => {
         <label v-if="m.remember" class="flex min-h-11 items-center gap-3">
           <input v-model="form.remember" type="checkbox" class="size-6 accent-brand" /> Remember me
         </label>
+
+        <template v-if="mode === 'signup'">
+          <label class="flex items-start gap-3 text-sm">
+            <input v-model="form.agree" type="checkbox" required class="mt-1 size-5 shrink-0 accent-brand" />
+            <span>I agree to the Privacy Policy and Terms of Use.</span>
+          </label>
+          <div class="space-y-2 text-sm">
+            <details class="rounded border-2 border-slate-300 bg-slate-50 p-3">
+              <summary class="cursor-pointer font-bold">Privacy Policy</summary>
+              <div class="mt-2 space-y-2">
+                <p>Akses Campus collects your email and account identity to sign you in and associate contributions with your account. We use submitted reports, votes, observations, notes, and evidence links to provide the community accessibility service.</p>
+                <p>Your private identity, vote weight, reliability information, and authentication tokens are not shown in public place pages. Do not submit sensitive personal information, faces, or private documents.</p>
+                <p>Demo records may be fictional and are labelled in the application. You can ask the project team to correct or remove your account data during the hackathon pilot.</p>
+              </div>
+            </details>
+            <details class="rounded border-2 border-slate-300 bg-slate-50 p-3">
+              <summary class="cursor-pointer font-bold">Terms of Use</summary>
+              <div class="mt-2 space-y-2">
+                <p>Use Akses Campus respectfully and submit only information you have observed or can clearly identify as a demo contribution. Do not submit harmful, illegal, discriminatory, or misleading content.</p>
+                <p>Community corroboration describes member agreement over submitted information; it is not a safety guarantee, formal accessibility certification, or promise that a facility will be available.</p>
+                <p>We may restrict abusive submissions and remove content that creates a safety, privacy, or legal risk. This is a hackathon prototype and may be unavailable or incomplete.</p>
+              </div>
+            </details>
+          </div>
+        </template>
 
         <!-- MESSAGES: role=alert is read aloud immediately; role=status politely -->
         <p v-if="error" role="alert" class="font-bold text-no">✖ {{ error }}</p>

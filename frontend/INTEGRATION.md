@@ -22,7 +22,7 @@ With backend `DATABASE_URL` configured and migrations applied separately, the ex
 
 The production build passes. `tests/browsing-smoke.cjs` accepts a Playwright module path, Chromium/Edge executable, local site URL and screenshot output path. It expects a disposable SQL fixture named `Fictional integration building` with the warning `Fictional preserved report`, while community persistence is disconnected. It checks details/warnings despite reports 503, retry, refresh persistence and unknown-facility filtering. Playwright is an external verification tool, not an added application dependency.
 
-Transactional community persistence and policy binding are merged (PRs #28 and #29). Chat, clearing and history UI are now implemented on feat/frontend-community-flows, prepared for PR review and not deployed. Real campus observations and shared deployment remain pending. Additional facilities, username login, tickets and permanent-observation voting are deferred proposals rather than requirements for this integration slice.
+Transactional community persistence and policy binding are merged (PRs #28 and #29). Chat, clearing and history UI are now implemented on feat/frontend-community-flows, prepared for PR review and not deployed. Facility observations now use `POST /api/places/{building_id}/observations`; only the three database-backed facility names are offered by the UI. Real campus observations and shared deployment remain pending. Additional facilities, username login, tickets and permanent-observation voting are deferred proposals rather than requirements for this integration slice.
 
 ## Changes to the repo
 | Action | Path |
