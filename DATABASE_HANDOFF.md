@@ -6,6 +6,26 @@ This is the database owner's maintained status and integration checklist. Update
 
 ## Current status
 
+### PR #31 MAINTAIN correction, 17 October 2026
+
+The initial correction/audit omitted PostgreSQL 17 MAINTAIN; its clean-grant claim was incomplete. Added and applied forward migration 20261017000600_revoke_service_role_maintain.sql; the already-applied 20261017000500 file is unchanged. The correction only revokes MAINTAIN from the twelve CRUD tables, preserving data/CRUD. It conditionally executes on PostgreSQL 17+, and the audit only queries this privilege on supported server versions. [PostgreSQL privilege reference](https://www.postgresql.org/docs/17/ddl-priv.html).
+
+An expanded regression first reproduced 12 remaining grants locally. After correction, 183 backend plus 5 audit tests pass, including a real-database audit test that deliberately grants MAINTAIN and confirms detection. Shared read-only verification: all 13 migration versions recorded, none pending/unrecognized, zero service-role MAINTAIN grants on application tables/views, no access or mapped-column issues, client TLS active, building count zero. The administrative runtime credential warning remains; no import/runtime-credential change occurred. Audit JSON stays ignored. This update is published for review through PR #31, not merged.
+
+### Shared schema deployed, 17 October 2026
+
+The user's explicit ?Apply the deployment Plan? instruction authorized shared schema writes. Supabase CLI 2.121.0 dry run matched the eleven accepted migrations, which then applied successfully. The project-reference fingerprint is `64c00171b175de41`; the configured Auth origin and project-qualified database username match. CLI management-token linking was unavailable, so the official database-URL push path used the configured password via child environment only. No credentials were printed or committed; client TLS was required.
+
+Cloud default privileges exposed a real grant gap: an explicit CRUD GRANT did not remove inherited service-role TRUNCATE/REFERENCES/TRIGGER rights on twelve tables. Added/applied immutable forward migration `20261017000500_service_role_privileges.sql` after regression verification. Existing applied files were untouched. This new migration is applied remotely but is published for PR review on chore/deploy-supabase-schema; merge the correction before another developer deploys from an older checkout.
+
+Current shared audit (including MAINTAIN): 13 applied versions, none pending/unrecognized, 14 tables and 7 views present, no missing/extra relations or mapped-column/access issues. RLS/invoker settings and effective browser/service grants match. Direct browser-role table reads are denied. Service-role API building/report reads return 200 across two fresh app instances, with live mode and the agreed policy bound. Counts: 0 campuses, 0 buildings, 0 reports, 0 history events. No fictional data, collected import, Auth users, votes or application records were inserted.
+
+Local verification: 183 backend tests and 5 audit tests pass on disposable PostgreSQL 17.11 with cloud-style default grants reproduced. Shared changes were migrations only; test roles/fixtures never ran remotely. The read-only audit JSON remains ignored. Supabase CLI config is initialized with automatic seeds disabled. Local fictional demo is disabled; policy remains iium-gombak-pilot-v1.
+
+Remaining: collect/review actual campus observations and apply their insert-only plan; provision/review a restricted runtime login; configure hosting/Auth/provider and rehearse the deployed product. The normal local database URL still uses postgres administration; service-role verification used temporary connection role selection, not a replacement credential. The audit therefore intentionally retains its administrative-role warning. No hosting deployment or paid AI call occurred.
+
+Earlier policy/connectivity/transaction notes below are historical. PRs #28, #29 and #30 are merged; their adapters, policy binding and frontend flows are implemented.
+
 ### Agreed versioned pilot policy, 17 October 2026
 
 The team agreed `iium-gombak-pilot-v1`: minimum supporters 3, minimum support weight 3, support ratio 0.67 exactly, maximum individual weight 2. Everyone starts at 1; a higher-weight assignment process remains unagreed and no automatic reputation updates are introduced. Identical rules apply to clearing claims. Use ?community corroborated,? without an accuracy or safety guarantee.
@@ -30,13 +50,13 @@ Next: confirm the current project is the intended pilot target and review deploy
 
 | Deliverable | Implementation / merge status | Verification / deployment |
 | --- | --- | --- |
-| Fourteen tables, seven backend-only views, eleven migrations | Merged through PR #23 | All eleven SQL suites pass locally; current shared target has no application schema/history |
+| Fourteen tables, seven backend-only views, thirteen migrations | Initial eleven merged; forward permission correction pending PR review | All thirteen applied to shared Supabase; final schema/grant audit matches |
 | Insert-only collection/import tooling | Merged PR #21 | Ten unit/CLI checks and disposable import/retry/conflict checks pass; no actual campus dataset found |
 | Lazy SQLModel sessions and real building repository/API | PR #24 is MERGED (confirmed via GitHub, 17 October local date) | Persisted HTTP reads and app recreation pass locally; shared runtime not verified |
 | Community read-view/private eligibility mappings and explicit transaction context | Merged through PR #25 | Service-role mappings, public DTO fields, commit, exception/constraint rollback and connection release pass |
 | Read-only target audit and migration/import plan | Merged PR #25; connectivity follow-up on `fix/supabase-connectivity` | Four audit privacy/unit checks and disposable audit checks pass, including rejected writes and detected grant drift |
-| Runtime CommunityRepository | Implemented on `feat/transactional-community`; prepared for PR review, not merged/deployed | 164 backend tests pass against disposable PostgreSQL, including concurrency and atomic rollback |
-| Shared Supabase deployment / real data import | No writes performed by this task | Connection restored with client TLS; current public application schema empty, no migration history |
+| Runtime CommunityRepository | Merged PR #28 | Local transactions verified; shared empty-data reads verified under service_role |
+| Shared Supabase deployment / real data import | Twelve migrations applied by explicit instruction; no dataset import | TLS, migration history, schema and grants verified; no campus data yet |
 
 The earlier database-delivery task explicitly restricted writable scope to `supabase/**`, `seed/**`, `backend/app/models.py`, `backend/app/database.py` and this handoff. Earlier building-browsing cross-area authorization ended with that task. No frontend, backend services/routers, manifests, shared contracts or other root files were edited for this task. No new migration, trust threshold, reputation rule, field or Storage policy was introduced. That task merged as PR #25. The full-stack connectivity follow-up is a separate review branch; no shared writes were performed. No shared database writes are authorized by the PR request.
 
@@ -73,6 +93,8 @@ Apply accepted migrations in filename order through the agreed Supabase migratio
 | `20261017000200_community_read_views.sql` | Active warnings and separate report/clearing member counts | Merged, PR #20 |
 | `20261017000300_place_detail_records.sql` | Complete public place-detail record projection | Merged, PR #22 |
 | `20261017000400_community_records.sql` | Public report/clearing/history DTO projections with private query access | Merged, PR #23 |
+| `20261017000500_service_role_privileges.sql` | Remove cloud-inherited TRUNCATE/REFERENCES/TRIGGER while retaining CRUD | Applied shared; correction pending PR review |
+| `20261017000600_revoke_service_role_maintain.sql` | Remove PostgreSQL 17 MAINTAIN left by the initial correction | Applied shared; correction pending PR review |
 
 All implemented tables enable RLS and revoke browser-role access, including inherited grants. The backend service role has CRUD on existing application records, only SELECT/INSERT on audit events, and SELECT/INSERT/UPDATE on contributor state. Grants do not replace authenticated API identity/eligibility checks. Private author IDs, retry keys/digests, voter identities, weights and policy metadata must never enter public DTOs. No Storage bucket, upload API, public database policy, or learned reputation system exists yet.
 

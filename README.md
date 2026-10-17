@@ -8,6 +8,9 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
+Shared Supabase schema is now deployed: 13 migrations recorded, including the MAINTAIN privilege correction, schema/grants verified and service-role API reads working. No campus dataset has been imported. Production hosting, a restricted runtime login and real Auth/AI rehearsal remain pending. The applied forward permission correction and deployment record are published for PR review; see DATABASE_HANDOFF.md.
+
+
 The agreed experimental policy is `iium-gombak-pilot-v1`: at least 3 supporters, support weight at least 3, at least 67% supporting weight, and a maximum weight of 2 per vote. Everyone starts at 1; higher-weight assignment remains unagreed. Local ignored settings select this version, while committed defaults keep voting disabled. Restart the backend to reload it. Named policy selection is on the current review branch; shared deployment remains pending. See [policy configuration](backend/README.md#agreed-pilot-policy-configuration).
 
 **Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. Building browsing now connects to PostgreSQL when `DATABASE_URL` is configured; SQL-backed list/details and warnings are verified locally in the Vue browser. Transactional community persistence is implemented on the current review branch and verified against disposable PostgreSQL; trust-policy activation, provider setup, shared deployment remains pending; chat, clearing and history UI are implemented on the current frontend review branch; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).

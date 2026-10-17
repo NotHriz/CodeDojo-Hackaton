@@ -48,6 +48,13 @@ def failure_category(error):
     return type(error).__name__
 
 
+def table_privileges(version_num):
+    privileges = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER']
+    if version_num >= 170000:
+        privileges.append('MAINTAIN')
+    return privileges
+
+
 def inspect(session):
     # This must be the first SQL statement, before the first catalog/data read.
     session.execute(text("SET TRANSACTION READ ONLY"))
@@ -105,10 +112,10 @@ def inspect(session):
             issues.append({"relation": name, "issue": "view_kind_or_invoker_security"})
         for role in sorted(roles):
             privileges = session.execute(text("""
-                SELECT privilege FROM unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE',
-                    'TRUNCATE','REFERENCES','TRIGGER']) privilege
+                SELECT privilege FROM unnest(CAST(:privileges AS text[])) privilege
                 WHERE has_table_privilege(:role, CAST(:oid AS oid), privilege)
-            """), {"role": role, "oid": row["oid"]}).scalars().all()
+            """), {"role": role, "oid": row["oid"],
+                   "privileges": table_privileges(result['server']['version_num'])}).scalars().all()
             allowed = {'SELECT'} if name in views else {'SELECT', 'INSERT', 'UPDATE', 'DELETE'}
             if name == 'report_events':
                 allowed = {'SELECT', 'INSERT'}

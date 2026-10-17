@@ -1,3 +1,13 @@
+# Shared Supabase deployment follow-up, 17 October 2026
+
+PR #31 review correction: the initial audit missed PostgreSQL 17 MAINTAIN. New forward migration 20261017000600 is applied; prior files are unchanged. The updated shared audit confirms zero service-role MAINTAIN grants on application relations. Expanded tests reproduce the original 12 grants and detect a deliberately injected grant. The initial clean-grant claim was incomplete; this corrected verification supersedes it.
+
+Applied the eleven planned migrations and one forward permission correction (20261017000500) under the explicit deployment instruction. All 13 are recorded, including the MAINTAIN follow-up; the shared schema/RLS/grant audit matches. Service-role API reads return 200 across fresh app instances; browser direct reads are denied. Shared data remains empty because no reviewed campus dataset exists. Local demo is disabled and policy iium-gombak-pilot-v1 remains selected.
+
+183 backend plus 5 audit tests pass locally, including cloud-default-grant regression. Applied correction and deployment docs are published for PR review on chore/deploy-supabase-schema. A restricted runtime credential, reviewed import, hosting/Auth/provider setup and full deployed rehearsal remain pending. Current local postgres credentials are administrative; temporary SET ROLE smoke tests do not replace them. No test fixtures or paid AI calls ran against shared services. See DATABASE_HANDOFF.md and supabase/DEPLOYMENT_PLAN.md for the applied record.
+
+Earlier handoffs below are historical and superseded by this status.
+
 # Frontend integration follow-up, 17 October 2026
 
 PR #30 review fix: successful building-level submissions/votes now use the non-destructive community refresh. A browser regression first reproduced clearing-draft loss after another barrier submission, then passed with the fix. It verifies draft text, observation timestamp, open history, retry UUID/body and map warning refresh across that separate submission. Production build and four helper tests pass. These remain intercepted UI checks; real external-service rehearsal is still pending.
