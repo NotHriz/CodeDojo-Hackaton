@@ -2,7 +2,11 @@
 
 This is a prepared plan, not authorization to write to the shared project.
 
-## Target inspection: 17 October 2026
+## Historical target inspection: before the 17 October connectivity retry
+
+The findings in this section describe the earlier failed attempt. They are
+superseded by the successful connectivity retry below; the local demo flag is
+currently enabled and SQL connectivity is restored.
 
 The ignored backend configuration contains a non-local PostgreSQL URL. Its
 credential-free target fingerprint is `efce16da98c9af3c`. The CLI's existing
@@ -27,6 +31,12 @@ credentials, user records, evidence URLs or driver exception details. Exit 0
 means its inspected checks passed; 1 means configuration/connectivity/inspection
 failed; 2 means connected but deployment review is required. Empty data is not a
 working application. Inspection does not certify concurrency or real observations.
+
+## Current connectivity retry result: 17 October 2026
+
+On 17 October the user requested a retry after checking network access. SQL connectivity now succeeds with `sslmode=require`; Psycopg confirms client TLS. The current target has PostgreSQL 17.11, zero application tables/views in `public`, and no `supabase_migrations.schema_migrations` table. All 21 expected relations are missing. HTTPS `buildings` also returns 404. Earlier REST counts are historical and do not describe the current target.
+
+The host/port/database fingerprint above is not a unique project identifier for shared poolers. Confirm the actual project-qualified username and Auth origin before approval. All eleven local migrations are candidates for the initial deployment; none were applied by this task. Existing application permissions remain unverifiable until deployment. The configured admin credential is for review/migration, not the deployed runtime. No shared-write approval has been given.
 
 ## Migration review gate
 
