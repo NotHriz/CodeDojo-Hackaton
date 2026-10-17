@@ -8,7 +8,7 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-Shared Supabase schema is now deployed: 12 migrations recorded, schema/grants verified and service-role API reads working. No campus dataset has been imported. Production hosting, a restricted runtime login and real Auth/AI rehearsal remain pending. The applied forward permission correction and deployment record are published for PR review; see DATABASE_HANDOFF.md.
+Shared Supabase schema is now deployed: 13 migrations recorded, including the MAINTAIN privilege correction, schema/grants verified and service-role API reads working. No campus dataset has been imported. Production hosting, a restricted runtime login and real Auth/AI rehearsal remain pending. The applied forward permission correction and deployment record are published for PR review; see DATABASE_HANDOFF.md.
 
 
 The agreed experimental policy is `iium-gombak-pilot-v1`: at least 3 supporters, support weight at least 3, at least 67% supporting weight, and a maximum weight of 2 per vote. Everyone starts at 1; higher-weight assignment remains unagreed. Local ignored settings select this version, while committed defaults keep voting disabled. Restart the backend to reload it. Named policy selection is on the current review branch; shared deployment remains pending. See [policy configuration](backend/README.md#agreed-pilot-policy-configuration).

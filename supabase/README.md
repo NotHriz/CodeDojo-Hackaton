@@ -6,7 +6,10 @@ The migrations implement campuses, buildings, entrances, facility observations, 
 
 ## Shared deployment status (17 October 2026)
 
-The explicit deployment instruction applied the first eleven migrations plus the forward service-role privilege correction 20261017000500. Shared history records all twelve and the schema/grant audit matches. The correction removes extra cloud-default TRUNCATE/REFERENCES/TRIGGER grants without changing data or intended CRUD. Role fixtures now reproduce those defaults locally. 182 backend plus four audit tests pass. This correction is applied remotely but published for PR review, not merged.
+PR #31 follow-up: 20261017000600 revokes PostgreSQL 17 MAINTAIN missed by the earlier correction. All 13 migrations are now applied. The updated audit confirms zero remaining MAINTAIN grants and no other access drift. The applied 20261017000500 migration remains unchanged. 183 backend plus 5 audit tests pass, including injected-MAINTAIN detection. This corrected result supersedes the earlier incomplete grant audit.
+
+
+The explicit deployment instruction applied the first eleven migrations plus the forward service-role privilege correction 20261017000500. Shared history records all thirteen and the schema/grant audit matches. The correction removes extra cloud-default TRUNCATE/REFERENCES/TRIGGER grants without changing data or intended CRUD. Role fixtures now reproduce those defaults locally. 183 backend plus five audit tests pass. This correction is applied remotely but published for PR review, not merged.
 
 No dataset has been imported. A restricted runtime credential and production hosting/Auth/provider verification remain pending. See ../DATABASE_HANDOFF.md and DEPLOYMENT_PLAN.md; older pending-deployment text below describes earlier increments.
 

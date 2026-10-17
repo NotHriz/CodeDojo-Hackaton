@@ -2,17 +2,19 @@
 
 ## Applied deployment: 17 October 2026
 
+PR #31 review identified MAINTAIN omitted by the initial permission correction and audit. The additional forward migration 20261017000600 is now applied; 20261017000500 remains unchanged. The audit checks MAINTAIN on PostgreSQL 17+, and an injected-grant regression verifies detection. Current shared audit records all 13 versions, zero remaining MAINTAIN grants on application relations, no other access drift and zero buildings. Local tests: 183 backend plus 5 audit checks pass. Runtime administration credentials remain an outstanding gap. The earlier twelve-version audit did not check MAINTAIN and was incomplete.
+
 The user explicitly instructed ?Apply the deployment Plan.? The eleven planned migrations were dry-run reviewed and applied with Supabase CLI 2.121.0 to the configured matching Auth/database project. The project-reference fingerprint is `64c00171b175de41` (distinct from the older shared-pooler host fingerprint).
 
 CLI linking requires an unavailable management token, so deployment used the official `db push --db-url` route with a password-free URL argument and `SUPABASE_DB_PASSWORD` passed only through the child environment. TLS was required. Vault updates, custom-role files and seed inclusion were excluded. No reset or test fixtures ran against the shared database.
 
 The first post-deploy audit found cloud default grants left service_role with TRUNCATE, REFERENCES and TRIGGER on twelve tables. Added and applied forward-only `20261017000500_service_role_privileges.sql` after disposable PostgreSQL tests reproduced those defaults. Original migrations were not edited. The correction preserves intended CRUD and removes only excess rights.
 
-Final read-only audit: all 12 versions recorded, no pending/unrecognized versions, all 14 tables and 7 views present, expected columns/RLS/invoker settings and effective role grants match, client TLS active. Direct SELECT is denied to anon/authenticated. Service-role HTTP list/report reads succeed across two app instances. No campus/building/report/history data exists; no import was attempted without a collected dataset.
+Final read-only audit: all 13 versions recorded (including the MAINTAIN follow-up), no pending/unrecognized versions, all 14 tables and 7 views present, expected columns/RLS/invoker settings and effective role grants match, client TLS active. Direct SELECT is denied to anon/authenticated. Service-role HTTP list/report reads succeed across two app instances. No campus/building/report/history data exists; no import was attempted without a collected dataset.
 
 The audit still flags the configured postgres administrative credential. Service-role smoke checks used SET ROLE on test connections, which does not provision a restricted runtime login. Configure that credential before hosting deployment. Backend local demo is now disabled; the agreed policy selection remains active locally. This branch records deployment and the applied correction but is published for PR review, not merged. Historical findings below are superseded by this result.
 
-Local verification: 182 backend tests plus 4 audit tests pass on disposable PostgreSQL 17.11, including the cloud-default-grant regression. Full production hosting and real Auth/AI/data rehearsal remain pending.
+Local verification: 183 backend tests plus 5 audit tests pass on disposable PostgreSQL 17.11, including the cloud-default-grant regression. Full production hosting and real Auth/AI/data rehearsal remain pending.
 
 ## Historical target inspection: before the 17 October connectivity retry
 
@@ -52,7 +54,7 @@ The host/port/database fingerprint above is not a unique project identifier for 
 
 ## Migration review gate
 
-The current sequence has twelve files. The initial eleven plus the deployment permission correction were applied in this order:
+The current sequence has thirteen files. The initial eleven plus the deployment permission correction were applied in this order:
 
 1. `20261016000100_building_foundation.sql`
 2. `20261016000200_place_evidence.sql`
@@ -66,6 +68,7 @@ The current sequence has twelve files. The initial eleven plus the deployment pe
 10. `20261017000300_place_detail_records.sql`
 11. `20261017000400_community_records.sql`
 12. `20261017000500_service_role_privileges.sql`
+13. `20261017000600_revoke_service_role_maintain.sql`
 
 The audit lists each local filename, version and SHA-256, pending/unrecognized
 remote versions when history is readable, missing/extra relations, columns,

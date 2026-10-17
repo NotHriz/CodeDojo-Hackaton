@@ -16,7 +16,7 @@ The user requested an explicit local chatbot demo before database integration. `
 
 ## Current status and decisions
 
-Shared deployment (17 October): all 12 migrations are applied, including a forward correction for excessive Supabase default service-role grants. Shared schema/permissions and empty-data API reads are verified. 182 backend plus 4 audit tests pass. No collected dataset is imported; restricted runtime credentials and hosting/Auth/AI rehearsal remain pending. The applied correction is published for PR review on chore/deploy-supabase-schema; see DATABASE_HANDOFF.md.
+Shared deployment (17 October): all 13 migrations are applied (including the MAINTAIN correction), including a forward correction for excessive Supabase default service-role grants. Shared schema/permissions and empty-data API reads are verified. 183 backend plus 5 audit tests pass. No collected dataset is imported; restricted runtime credentials and hosting/Auth/AI rehearsal remain pending. The applied correction is published for PR review on chore/deploy-supabase-schema; see DATABASE_HANDOFF.md.
 
 
 Frontend follow-up (17 October): chat with source cards and structured filters, clearing submission/votes, and paginated report history are implemented on feat/frontend-community-flows, prepared for PR review. Build, four helper tests and contract-driven Edge checks pass. No real Auth/provider/database rehearsal or shared writes occurred. See frontend/INTEGRATION.md.

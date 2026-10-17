@@ -16,11 +16,17 @@ from pydantic import SecretStr
 class TargetAuditTests(unittest.TestCase):
     def test_inventory_matches_versioned_source(self):
         migrations, tables, views = inspect_target.inventory()
-        self.assertEqual(len(migrations), 12)
+        self.assertEqual(len(migrations), 13)
         self.assertEqual(len(tables), 14)
         self.assertEqual(len(views), 7)
-        self.assertEqual(len({row['version'] for row in migrations}), 12)
+        self.assertEqual(len({row['version'] for row in migrations}), 13)
         self.assertTrue(all(len(row['sha256']) == 64 for row in migrations))
+
+    def test_maintain_is_checked_only_on_supported_servers(self):
+        for version in (150000, 160011):
+            self.assertNotIn('MAINTAIN', inspect_target.table_privileges(version))
+        for version in (170000, 170011, 180000):
+            self.assertIn('MAINTAIN', inspect_target.table_privileges(version))
 
     def test_connection_error_never_prints_driver_message_or_secret(self):
         settings = SimpleNamespace(database_url=SecretStr('postgresql://user:super-private-password@localhost/postgres'),

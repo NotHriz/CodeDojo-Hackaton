@@ -332,10 +332,33 @@ def test_cloud_default_grants_are_narrowed_to_application_contract(local_databas
     admin, _ = local_database
     assert scalar(admin, """SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='public' AND c.relkind IN ('r','v')
-        AND has_table_privilege('service_role', c.oid, 'TRUNCATE,REFERENCES,TRIGGER')""") == 0
+        AND has_table_privilege('service_role', c.oid, 'TRUNCATE,REFERENCES,TRIGGER,MAINTAIN')""") == 0
     assert scalar(admin, """SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='public' AND c.relkind='r' AND c.relname NOT IN ('contributor_state','report_events')
         AND has_table_privilege('service_role',c.oid,'SELECT')
         AND has_table_privilege('service_role',c.oid,'INSERT')
         AND has_table_privilege('service_role',c.oid,'UPDATE')
         AND has_table_privilege('service_role',c.oid,'DELETE')""") == 12
+
+
+def test_audit_detects_maintain_drift_on_real_postgres(local_database):
+    import sys
+    sys.path.insert(0, str(ROOT / 'supabase'))
+    from inspect_target import inspect
+    admin, _ = local_database
+    with admin.session() as session:
+        assert not inspect(session)['access_issues']
+    try:
+        with admin.transaction() as session:
+            session.execute(text('GRANT MAINTAIN ON public.campuses TO service_role'))
+        with admin.session() as session:
+            report = inspect(session)
+        issues = [issue for issue in report['access_issues']
+                  if issue.get('relation') == 'campuses' and issue.get('role') == 'service_role']
+        assert len(issues) == 1
+        assert 'MAINTAIN' in issues[0]['actual']
+        assert 'MAINTAIN' not in issues[0]['expected']
+        assert report['requires_review']
+    finally:
+        with admin.transaction() as session:
+            session.execute(text('REVOKE MAINTAIN ON public.campuses FROM service_role'))
