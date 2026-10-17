@@ -20,6 +20,7 @@ from app.services.community import (
     TrustPolicy, VoteSnapshot, VoteStance, aggregate_votes, derive_report_status,
     eligible_weight, utc_now, validate_observation_time,
 )
+from app.services.trust_policies import validate_named_binding
 
 PILOT = "iium-gombak"
 POLICY_FIELDS = tuple(TrustPolicy.model_fields)
@@ -38,6 +39,7 @@ class PostgresCommunityRepository:
             raise ValueError("Voting requires both an explicit policy and version.")
         if policy_version is not None and (not policy_version.strip() or len(policy_version) > 128):
             raise ValueError("Policy version must contain 1–128 characters.")
+        validate_named_binding(policy, policy_version)
         self.database = database
         self.policy = policy
         self.policy_version = policy_version

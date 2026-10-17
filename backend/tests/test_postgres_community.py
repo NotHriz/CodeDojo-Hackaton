@@ -27,6 +27,7 @@ from app.services.community import (
 from app.services.postgres_community import PostgresCommunityRepository, payload_digest
 from app.services.auth import AuthenticatedUser
 from app.services.postgres_places import PostgresPlaceRepository
+from app.services.trust_policies import PILOT_POLICY, PILOT_POLICY_VERSION
 
 POLICY = TrustPolicy(minimum_supporters=3, minimum_weight=3, support_ratio=.67, maximum_vote_weight=2)
 ROOT = Path(__file__).resolve().parents[2]
@@ -301,3 +302,27 @@ def test_http_mutations_persist_and_failure_codes_are_explicit(connected):
         warning = client.get(f"/api/places/{body.place_id}").json()["active_warnings"]
         assert str(report["id"]) in {w["report_id"] for w in warning}
         assert len(client.get(f"/api/reports/{report['id']}/history").json()["items"]) == 2
+
+
+def test_named_policy_writes_exact_version_and_threshold_snapshots(connected):
+    admin, original, body, now = connected
+    repo = PostgresCommunityRepository(original.database, policy=PILOT_POLICY.policy, policy_version=PILOT_POLICY_VERSION)
+    report = repo.create_report(uuid4(), body, now, uuid4()).public
+    for _ in range(3):
+        repo.cast_vote(report.id, uuid4(), VoteStance.CORROBORATE, 1, PILOT_POLICY.policy)
+    assert repo.get_report(report.id).public.status == "community_corroborated"
+    clearing = repo.create_clearance(report.id, uuid4(), ClearanceCreate(description="Cleared", observed_at=now), now, uuid4()).public
+    for _ in range(3):
+        repo.cast_clearance_vote(report.id, clearing.id, uuid4(), VoteStance.CORROBORATE, 1, PILOT_POLICY.policy)
+    assert repo.get_report(report.id).public.status == "resolved"
+    for table in ("report_votes", "clearance_votes", "report_events"):
+        with admin.session() as session:
+            rows = session.execute(text(f"SELECT * FROM public.{table} WHERE report_id=:id AND policy_version IS NOT NULL"), {"id": report.id}).mappings().all()
+        assert len(rows) == (6 if table == "report_events" else 3)
+        for row in rows:
+            assert row["policy_version"] == PILOT_POLICY_VERSION
+            for name, value in PILOT_POLICY.policy.model_dump().items():
+                assert float(row[f"policy_{name}"]) == value
+    # A new deployment cannot silently relabel existing snapshots.
+    with pytest.raises(PolicyConflict):
+        original.cast_vote(report.id, uuid4(), VoteStance.CORROBORATE, 1, POLICY)

@@ -1,6 +1,6 @@
 # Community reports and votes — backend handoff v0.1
 
-Backend routes, input validation, identity checks, limits, and deterministic trust functions are implemented. The transactional PostgreSQL adapter is implemented and configured alongside the building adapter when DATABASE_URL is supplied; shared deployment/runtime verification remains pending. Numeric trust thresholds are **not activated by default** and need review. This proposal does not prescribe SQL tables or claim production anti-fraud protection.
+Backend routes, input validation, identity checks, limits, and deterministic trust functions are implemented. The transactional PostgreSQL adapter is implemented and configured alongside the building adapter when DATABASE_URL is supplied; shared deployment/runtime verification remains pending. The team agreed experimental policy `iium-gombak-pilot-v1`; activation is explicit and disabled by default. This proposal does not prescribe SQL tables or claim production anti-fraud protection.
 
 ## HTTP contract
 
@@ -29,9 +29,21 @@ Statuses: `unverified`, `community_corroborated`, `disputed`, `resolved`. Commun
 
 ## Trust calculation
 
-`app.services.community.TrustPolicy` requires four explicit values: `minimum_supporters` (at least two), `minimum_weight`, `support_ratio` (greater than half), and `maximum_vote_weight` (between one and two). There is no active default policy or environment switch that silently enables an unreviewed algorithm. The backend composition root must supply a reviewed policy to `create_app(trust_policy=reviewed_policy, trust_policy_version=reviewed_version)`. The persisted adapter requires both; thresholds are bound to the supplied version, and incompatible existing vote snapshots return 409 rather than silently reaggregating under a changed policy.
+The team agreed `iium-gombak-pilot-v1` on 17 October 2026. Select it with backend-only `COMMUNITY_POLICY_VERSION=iium-gombak-pilot-v1`; the committed default `disabled` keeps voting unavailable. Unknown/blank version settings fail startup. Normal startup binds the same immutable version and thresholds to the API and PostgreSQL adapter. Explicitly injected policies retain precedence, but cannot reuse this published version with different thresholds.
 
-Tests use the **illustrative experimental policy**: three distinct supporters, minimum total support weight three, support ratio 0.67, and maximum individual weight two. These are test inputs, not validated production thresholds.
+| Rule | Pilot value |
+| --- | --- |
+| Distinct supporting voters | At least 3 |
+| Supporting weight | At least 3 |
+| Supporting share of all vote weight | At least 67% (`0.67`, not two-thirds) |
+| Individual weight cap | 2 |
+| New account weight | 1 |
+
+Everyone starts at weight 1. No higher-weight assignment mechanism is agreed or introduced; do not promote accounts manually until its process is agreed. No automatic rewards for agreement or penalties for disagreement exist. Both report and clearing votes use these rules. With all weights 1: 3 support/0 dispute and 3/1 corroborate; 3/2 disputes; 2/0 remains unverified. Two-thirds (approximately 66.67%) fails the exact 67% cutoff.
+
+The repository snapshots the version and all four thresholds in accepted vote rows and history within the mutation transaction. Targets with incompatible existing report or clearing snapshots return 409 and require a separately reviewed policy migration. Never edit a published version, rewrite old snapshots, or silently reaggregate incompatible votes. Introduce a new version when rules change. A version matching these thresholds is an implementation identifier, not evidence of accuracy or safety. Use the label **community corroborated**.
+
+Local ignored configuration selects this policy; restart any already-running backend to load it. Shared deployment/runtime verification remains pending. `TrustPolicy` remains the four-number calculation DTO; the separate immutable binding owns its version. Injected integration can still use `create_app(trust_policy=reviewed_policy, trust_policy_version=reviewed_version)`.
 
 `aggregate_votes` requires unique voter IDs and no author vote. New members have neutral weight one; supplied internal weights are bounded to [1, configured maximum]. A report is community corroborated only when all quorum/weight/ratio conditions hold. Otherwise, any opposition marks it disputed; without opposition it stays unverified. A strong enough quorum can outweigh limited opposition, but a single trusted member cannot establish consensus.
 
@@ -76,4 +88,4 @@ Tests use explicit in-memory adapters to exercise routes and backend policy func
 
 Same-actor creates serialize under that row lock before comparing the scoped retry key and SHA-256 digest; normalized UTC observation time and validated request fields are included, server submission time is excluded. Existing SQL uniqueness constraints remain the final guard. Private weights are freshly loaded under lock; the earlier route weight is not authoritative. Vote upserts, clearing/parent statuses and accepted history snapshots share one transaction. Parent locking serializes report and clearing votes, preserving other corroborated clearances on reversal. Equal-time history retains persisted sequence order without exposing the sequence publicly.
 
-Real disposable PostgreSQL tests cover competing identical/conflicting retries, concurrent distinct/repeated votes, clearing resolution/reversal, restriction races, and injected post-history failures for all four mutation types. These are local transaction checks, not real Auth/community validation or proof of shared deployment. Shared schema/permissions and an explicitly reviewed voting policy/version remain activation requirements.
+Real disposable PostgreSQL tests cover competing identical/conflicting retries, concurrent distinct/repeated votes, clearing resolution/reversal, restriction races, and injected post-history failures for all four mutation types. These are local transaction checks, not real Auth/community validation or proof of shared deployment. Shared schema/permissions and deployment selection of the agreed policy/version remain activation requirements.
