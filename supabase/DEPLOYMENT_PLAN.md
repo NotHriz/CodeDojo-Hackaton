@@ -28,6 +28,12 @@ means its inspected checks passed; 1 means configuration/connectivity/inspection
 failed; 2 means connected but deployment review is required. Empty data is not a
 working application. Inspection does not certify concurrency or real observations.
 
+### Connectivity retry result
+
+On 17 October the user requested a retry after checking network access. SQL connectivity now succeeds with `sslmode=require`; Psycopg confirms client TLS. The current target has PostgreSQL 17.11, zero application tables/views in `public`, and no `supabase_migrations.schema_migrations` table. All 21 expected relations are missing. HTTPS `buildings` also returns 404. Earlier REST counts are historical and do not describe the current target.
+
+The host/port/database fingerprint above is not a unique project identifier for shared poolers. Confirm the actual project-qualified username and Auth origin before approval. All eleven local migrations are candidates for the initial deployment; none were applied by this task. Existing application permissions remain unverifiable until deployment. The configured admin credential is for review/migration, not the deployed runtime. No shared-write approval has been given.
+
 ## Migration review gate
 
 The accepted sequence has eleven files, applied in this exact order:
