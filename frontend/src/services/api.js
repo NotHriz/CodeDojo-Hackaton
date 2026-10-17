@@ -34,6 +34,10 @@ export const listPlaces = () => request('/api/places?limit=100')                
 export const getPlace = id => request(`/api/places/${encodeURIComponent(id)}`)       // GET one building + observations
 export const listReports = placeId => request(`/api/reports?place_id=${encodeURIComponent(placeId)}`)
 export const submitReport = (body, idem) => request('/api/reports', { method: 'POST', body, idem }) // needs sign-in
+export const sendChat = body => request('/api/chat', { method: 'POST', body })
+export const submitClearance = (reportId, body, idem) => request(`/api/reports/${encodeURIComponent(reportId)}/clearance-observations`, { method: 'POST', body, idem })
+export const voteClearance = (reportId, clearanceId, stance) => request(`/api/reports/${encodeURIComponent(reportId)}/clearance-observations/${encodeURIComponent(clearanceId)}/votes`, { method: 'POST', body: { stance } })
+export const getReportHistory = (reportId, offset = 0) => request(`/api/reports/${encodeURIComponent(reportId)}/history?limit=20&offset=${offset}`)
 
 // stance: 'corroborate' | 'dispute'. kind: 'reports' (exists) | 'observations' (PROPOSED)
 export const castVote = (kind, id, stance) => request(`/api/${kind}/${id}/votes`, { method: 'POST', body: { stance } })

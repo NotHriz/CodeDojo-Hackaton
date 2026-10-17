@@ -60,8 +60,11 @@ class Store:
         return self.history
 
     def append_event(self, report, previous_status, action):
+        # Windows clocks can assign equal times to sequential requests. Keep
+        # lifecycle fixtures ordered without relying on random UUID tie breaks.
+        occurred_at = max(datetime.now(timezone.utc), self.history[-1].occurred_at + timedelta(microseconds=1))
         self.history.append(ReportEventResponse(
-            id=uuid4(), report_id=report.id, occurred_at=datetime.now(timezone.utc),
+            id=uuid4(), report_id=report.id, occurred_at=occurred_at,
             action=action, previous_status=previous_status, new_status=report.status,
             community=report.community.model_copy(deep=True),
         ))
@@ -402,3 +405,15 @@ def test_clearing_vote_reversal_restores_original_corroboration_and_records_hist
     assert history[-1]["action"] == "clearance_vote_updated"
     assert history[-1]["previous_status"] == "resolved"
     assert history[-1]["new_status"] == "community_corroborated"
+
+
+def test_history_preserves_repository_order_for_equal_timestamps(connected):
+    client, store = connected
+    report_id = store.original.public.id
+    # Persisted sequence, rather than random event UUID, is authoritative.
+    store.history = [ReportEventResponse(
+        id=UUID(int=identifier), report_id=report_id, occurred_at=store.now,
+        action="vote_updated", previous_status="unverified", new_status="unverified",
+    ) for identifier in (3, 1, 2)]
+    response = client.get(f"/api/reports/{report_id}/history")
+    assert [event["id"] for event in response.json()["items"]] == [str(UUID(int=i)) for i in (3, 1, 2)]

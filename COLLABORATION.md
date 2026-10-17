@@ -15,6 +15,7 @@ Specific file exceptions override directory ownership.
 | `backend/app/models.py` | Teammate 3: database | Agree required fields before the database owner edits |
 | `backend/app/database.py` | Teammate 3: database | Agree session interface before backend services use it |
 | `supabase/**`, `seed/**` | Teammate 3: database | Submit campus observations to the database owner |
+| `DATABASE_HANDOFF.md` | Teammate 3: database, by explicit user handoff | Review integration requirements and request updates |
 | `contracts/**` | User: contract editor, with affected teammate review | Agree changes before implementation; do not edit competing versions |
 | Root `README.md`, `onboarding.md`, `AGENTS.md`, this guide, `.gitignore`, and future root CI/deployment configuration | User: integration owner | Send requested edits or arrange a scoped handoff |
 
@@ -88,6 +89,7 @@ Frontend mocks are allowed for development after the contract is agreed. Label m
 - Keep schema changes, policies, and migration scripts versioned in `supabase/` once tooling is selected.
 - Never rewrite a migration already applied to the shared database. Add a new forward migration.
 - Coordinate migration order with backend code; prefer additive changes until all consumers migrate.
+- Read and update [DATABASE_HANDOFF.md](DATABASE_HANDOFF.md) with each database task/PR affecting implementation, verification, policies, or readiness. Record pending versus merged work, actual checks, shared migration status, and remaining integration dependencies.
 - Seed imports must be repeatable and must not erase existing reports or votes.
 - Announce schema-changing work, seed/reset operations, and Auth/Storage configuration changes in the team's normal channel. Do not reset shared data without agreement from affected teammates.
 - Use local environment files for credentials. Never commit secrets or private contributor scores as seed data.

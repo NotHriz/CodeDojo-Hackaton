@@ -1,40 +1,83 @@
 <script setup>
 // BUILDING DETAILS: access features, photos, barrier reports with voting, and a form to add information.
 // Everything added here is sent to the backend and shown as "unverified" until the community votes.
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, nextTick } from 'vue'
 import { RouterLink } from 'vue-router'
 import { getPlace, listReports, castVote, submitObservation, submitReport, uploadPhoto } from '../services/api.js'
 import { FACILITIES, STATUS } from '../services/facilities.js'
 import { auth } from '../services/auth.js'
 import { a11y } from '../composables/useA11y.js'
+import ReportCard from './ReportCard.vue'
 
 const props = defineProps({ id: String })
+const emit = defineEmits(['changed'])
 const place = ref(null)
 const reports = ref([])
+const reportState = ref('loading')
+const reportError = ref('')
 const state = ref('loading')
 const error = ref('')
 const done = ref('')
 const busy = ref(false)
 const root = ref(null)
 
-// LOAD the building and its reports whenever a different building is chosen.
+let loadVersion = 0
+let communityRefreshVersion = 0
+// Building details stay usable when community persistence is unavailable.
 async function load() {
+  const version = ++loadVersion
+  const id = props.id
   state.value = 'loading'
+  error.value = ''; place.value = null; reports.value = []
+  loadReports(id, version)
   try {
-    const [p, r] = await Promise.all([getPlace(props.id), listReports(props.id)])
-    place.value = p; reports.value = r.items; state.value = 'ready'
+    const p = await getPlace(id)
+    if (version !== loadVersion) return
+    place.value = p; state.value = 'ready'
+    await nextTick()
     root.value?.focus() // moves keyboard/screen reader focus to the new details
-  } catch (e) { error.value = e.message; state.value = 'error' }
+  } catch (e) {
+    if (version !== loadVersion) return
+    error.value = e.message; state.value = 'error'
+  }
+}
+async function loadReports(id = props.id, version = loadVersion) {
+  reportState.value = 'loading'; reportError.value = ''
+  try {
+    const result = await listReports(id)
+    if (version !== loadVersion) return
+    reports.value = result.items; reportState.value = 'ready'
+  } catch (e) {
+    if (version !== loadVersion) return
+    reportError.value = e.message; reportState.value = 'error'
+  }
 }
 watch(() => props.id, load, { immediate: true })
 
-// WORDS for report statuses (shown instead of raw codes)
-const REPORT = { unverified: 'Unverified', community_corroborated: 'Confirmed by community', disputed: 'Disputed', resolved: 'Resolved' }
+function updateReport(report) {
+  reports.value = reports.value.map(existing => existing.id === report.id ? report : existing)
+}
+// Refresh after a successful mutation without destroying other report drafts or focus.
+async function refreshCommunity() {
+  const version = loadVersion; const id = props.id
+  const refresh = ++communityRefreshVersion
+  emit('changed')
+  const results = await Promise.allSettled([listReports(id), getPlace(id)])
+  if (version !== loadVersion || refresh !== communityRefreshVersion) return
+  if (results[0].status === 'fulfilled') {
+    reports.value = results[0].value.items; reportError.value = ''; reportState.value = 'ready'
+  } else reportError.value = `Could not refresh reports: ${results[0].reason.message}`
+  if (results[1].status === 'fulfilled') place.value = results[1].value
+  else reportError.value += ` Could not refresh building warnings: ${results[1].reason.message}`
+}
 
-// VOTING: kind is 'reports' (backend ready) or 'observations' (backend must add). Reloads to show new counts.
+// WORDS for report statuses (shown instead of raw codes)
+const REPORT = { unverified: 'Unverified', community_corroborated: 'Community corroborated', disputed: 'Disputed', resolved: 'Resolved' }
+
+// Refresh counts without unmounting other reports or discarding their drafts.
 async function vote(kind, id, stance) {
   error.value = ''; done.value = ''
-  try { await castVote(kind, id, stance); done.value = 'Your vote was saved.'; await load() }
+  try { await castVote(kind, id, stance); done.value = 'Your vote was saved.'; await refreshCommunity() }
   catch (e) { error.value = e.message }
 }
 
@@ -52,7 +95,7 @@ async function submit() {
       await submitReport({ place_id: props.id, barrier_type: 'temporary_barrier', description: form.description, observed_at: new Date().toISOString(), evidence_urls }, idem)
     idem = crypto.randomUUID(); form.description = ''; form.file = null
     done.value = 'Thank you. Your information was sent and is unverified until others vote.'
-    await load()
+    await refreshCommunity()
   } catch (e) { error.value = e.message } finally { busy.value = false }
 }
 
@@ -66,7 +109,10 @@ function readAloud() {
 <template>
   <section ref="root" tabindex="-1" aria-labelledby="pd-h" class="card space-y-5">
     <p v-if="state === 'loading'" role="status">Loading details...</p>
-    <p v-else-if="state === 'error'" role="alert" class="font-bold text-no">✖ {{ error }}</p>
+    <div v-else-if="state === 'error'">
+      <p role="alert" class="font-bold text-no">✖ {{ error }}</p>
+      <button type="button" class="btn-alt mt-2" @click="load">Try details again</button>
+    </div>
 
     <template v-else>
       <!-- HEADER -->
@@ -75,6 +121,15 @@ function readAloud() {
         <p v-if="place.is_demo" class="mt-1 inline-block rounded border-2 border-ink px-2 font-bold">Sample data</p>
         <p v-if="place.description" class="mt-2">{{ place.description }}</p>
         <button v-if="a11y.sr" type="button" class="btn-alt mt-2" @click="readAloud">Read aloud</button>
+      </div>
+
+      <div v-if="place.active_warnings.length" aria-label="Active building warnings" class="rounded border-2 border-no p-3">
+        <h3 class="text-xl font-bold">Active warnings</h3>
+        <ul class="space-y-2">
+          <li v-for="warning in place.active_warnings" :key="warning.report_id">
+            <strong>{{ REPORT[warning.status] }}</strong>: {{ warning.description }}
+          </li>
+        </ul>
       </div>
 
       <!-- ACCESS FEATURES: all rows from services/facilities.js; missing data shows "Not checked yet" -->
@@ -111,17 +166,19 @@ function readAloud() {
       <!-- BARRIER REPORTS with community votes -->
       <div>
         <h3 class="text-xl font-bold">Barrier reports</h3>
-        <p v-if="!reports.length">No active reports.</p>
-        <ul class="space-y-3">
-          <li v-for="r in reports" :key="r.id" class="rounded border-2 border-slate-300 p-3">
-            <p class="font-bold">⚠ {{ REPORT[r.status] }}</p>
-            <p>{{ r.description }}</p>
-            <img v-for="u in r.evidence_urls" :key="u" :src="u" :alt="`Photo of reported barrier at ${place.name}`" class="mt-2 max-h-48 rounded" />
-            <p class="mt-1">{{ r.community.supporters }} agree, {{ r.community.disputes }} disagree</p>
-            <div v-if="auth.user && r.status !== 'resolved'" class="mt-2 flex flex-wrap gap-2">
-              <button type="button" class="btn-alt" @click="vote('reports', r.id, 'corroborate')">I agree</button>
-              <button type="button" class="btn-alt" @click="vote('reports', r.id, 'dispute')">I disagree</button>
-            </div>
+        <p v-if="reportState === 'loading'" role="status">Loading barrier reports...</p>
+        <div v-else-if="reportState === 'error'">
+          <p role="alert" class="font-bold text-no">{{ reportError }}</p>
+          <button type="button" class="btn-alt mt-2" @click="loadReports()">Try reports again</button>
+        </div>
+        <p v-else-if="!reports.length">No reports have been submitted.</p>
+        <div v-if="reportState === 'ready' && reportError">
+          <p role="alert" class="font-bold text-no">{{ reportError }}</p>
+          <button type="button" class="btn-alt" @click="refreshCommunity">Refresh reports and warnings</button>
+        </div>
+        <ul v-if="reportState === 'ready' && reports.length" class="space-y-3">
+          <li v-for="r in reports" :key="r.id">
+            <ReportCard :report="r" @updated="updateReport" @changed="refreshCommunity" />
           </li>
         </ul>
       </div>

@@ -8,7 +8,12 @@ Built as a planned three-person, 24-hour hackathon project under the Persons wit
 
 ## Status
 
-**Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. All 142 backend tests pass. Real database adapters, trust-policy activation, provider setup, frontend, and deployment remain pending; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).
+Shared Supabase schema is now deployed: 13 migrations recorded, including the MAINTAIN privilege correction, schema/grants verified and service-role API reads working. No campus dataset has been imported. Production hosting, a restricted runtime login and real Auth/AI rehearsal remain pending. The applied forward permission correction and deployment record are published for PR review; see DATABASE_HANDOFF.md.
+
+
+The agreed experimental policy is `iium-gombak-pilot-v1`: at least 3 supporters, support weight at least 3, at least 67% supporting weight, and a maximum weight of 2 per vote. Everyone starts at 1; higher-weight assignment remains unagreed. Local ignored settings select this version, while committed defaults keep voting disabled. Restart the backend to reload it. Named policy selection is on the current review branch; shared deployment remains pending. See [policy configuration](backend/README.md#agreed-pilot-policy-configuration).
+
+**Backend features implemented; external integration pending.** FastAPI includes health/docs, building discovery, Supabase JWT verification, DeepSeek chat orchestration, signed-in reports/votes/clearing observations, and explicitly configured trust rules. Building browsing now connects to PostgreSQL when `DATABASE_URL` is configured; SQL-backed list/details and warnings are verified locally in the Vue browser. Transactional community persistence is implemented on the current review branch and verified against disposable PostgreSQL; trust-policy activation, provider setup, shared deployment remains pending; chat, clearing and history UI are implemented on the current frontend review branch; disconnected features return explicit 503s. See [backend startup instructions](backend/README.md#local-development) and [team handoff/review order](BACKEND_HANDOFF.md).
 
 Teammates and future agents should read [onboarding.md](onboarding.md) for scope, judging criteria, related work, acceptance criteria, responsibilities, and engineering guidance.
 
@@ -52,7 +57,7 @@ Route planning, volunteer dispatch, city-wide coverage, and AI accessibility cer
 
 The assistant is grounded in campus records and exposes two initial tools: `search_places` and `get_place_details`. It can interpret search requirements, return matching locations, and explain known facilities and active warnings. The frontend displays editable interpreted filters, matching markers, and source cards with observation dates and report status.
 
-The integration flow is `Vue chat panel -> POST /api/chat -> backend-validated tool call -> database query -> answer + cards + map/list updates`. The backend endpoint and tool schemas are implemented in [the chat contract](contracts/chat.md); frontend review and the real database adapter remain pending.
+The integration flow is `Vue chat panel -> POST /api/chat -> backend-validated tool call -> database query -> answer + cards + map/list updates`. The backend endpoint and tool schemas are implemented in [the chat contract](contracts/chat.md); the configured place adapter is implemented; frontend chat wiring and external provider verification remain pending.
 
 - The backend allows only explicitly defined tools and validates arguments. The model cannot run arbitrary SQL, vote, change report status, or modify reputation.
 - Answers must distinguish unknown facilities and unverified reports; missing evidence must not become a confident accessibility claim.
@@ -95,7 +100,7 @@ Render Free sleeps after 15 minutes without inbound traffic and can take about a
 
 ## Project structure
 
-The directories below exist. `.gitkeep` files preserve empty frontend folders. The backend now has a runnable entry point, configuration, health router, and tests; database-owned modules remain placeholders.
+The directories below exist. `.gitkeep` files preserve empty frontend folders. The backend has a runnable entry point, configuration, health router, tests and configured PostgreSQL building reads; community persistence remains pending.
 
 ```text
 frontend/
@@ -183,7 +188,7 @@ Custom markers, panning, and zooming do not add map loads; recreating the map do
 - Avoid collecting disability histories or requiring precise live location.
 - Send only necessary context to the AI provider, avoid logging sensitive chat content, and ground answers in database evidence.
 
-The backend has 142 passing tests using generated signing keys, explicit test repositories, and mocked providers; dependency checks pass. Real database/provider integration, database concurrency, and complete product workflows have not been tested. Add frontend build, seed, and deployment commands as they become available.
+The backend has 148 passing tests and clean dependency checks. The frontend production build, disposable PostgreSQL suites, configured building API checks and SQL-backed Vue browsing smoke check also pass. Verification uses fictional disposable records; shared Supabase, paid providers, community transaction concurrency and the complete contribution journey remain unverified. See backend/frontend READMEs and DATABASE_HANDOFF.md for commands and boundaries.
 
 For outages, show accurate component-specific errors, retain unsent form input, and never show failed submissions as successful. A local setup and clearly identified recorded demo are presentation backups; cached records, if used, must display their age. The user reports no submission artifact is required.
 

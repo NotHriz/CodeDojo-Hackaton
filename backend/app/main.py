@@ -1,6 +1,7 @@
-"""FastAPI application entry point; external integrations are not connected yet."""
+"""FastAPI composition root, including opt-in configured PostgreSQL browsing."""
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -9,6 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 from app.config import Settings
+from app.database import Database
 from app.routers.auth import router as auth_router
 from app.routers.chat import router as chat_router
 from app.routers.community import router as community_router
@@ -20,6 +22,9 @@ from app.services.auth import SupabaseTokenVerifier, TokenVerifier
 from app.services.chat import ChatBudget, ChatProvider, DeepSeekProvider
 from app.services.community import CommunityRepository, TrustPolicy
 from app.services.demo_places import DemoPlaceRepository
+from app.services.postgres_places import PostgresPlaceRepository
+from app.services.postgres_community import PostgresCommunityRepository
+from app.services.trust_policies import configured_policy, validate_named_binding
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +43,28 @@ def create_app(
     chat_budget: ChatBudget | None = None,
     community_repository: CommunityRepository | None = None,
     trust_policy: TrustPolicy | None = None,
+    trust_policy_version: str | None = None,
     contribution_budget: ChatBudget | None = None,
 ) -> FastAPI:
     """Build the API without opening database connections or contacting providers."""
     settings = settings if settings is not None else Settings()
+    # Explicitly supplied policies keep precedence over environment selection.
+    if trust_policy is None and trust_policy_version is None:
+        binding = configured_policy(settings.community_policy_version)
+        if binding is not None:
+            trust_policy, trust_policy_version = binding.policy, binding.version
+    validate_named_binding(trust_policy, trust_policy_version)
     # Explicit real adapters always take precedence; failures never trigger demo data.
     effective_places = place_repository
+    database = None
+    if effective_places is None and settings.database_url.get_secret_value():
+        database = Database(settings.database_url.get_secret_value())
+        effective_places = PostgresPlaceRepository(database)
+        if community_repository is None:
+            community_repository = PostgresCommunityRepository(
+                database, policy=trust_policy if trust_policy_version is not None else None,
+                policy_version=trust_policy_version,
+            )
     if effective_places is None and settings.demo_data_enabled:
         effective_places = DemoPlaceRepository()
     demo_mode = isinstance(effective_places, DemoPlaceRepository)
@@ -51,23 +72,34 @@ def create_app(
         raise ValueError("Demo building data is not allowed in production.")
     if demo_mode and community_repository is not None:
         raise ValueError("Local demo buildings cannot be combined with a community persistence adapter.")
+
+    @asynccontextmanager
+    async def lifespan(app):
+        try:
+            yield
+        finally:
+            if database is not None:
+                database.close()
+
     api = FastAPI(
         title="Akses Campus API",
         version="0.1.0",
         description=(
             "LOCAL DEMO: fictional building records, not verified IIUM facilities. Real AI requests still use DeepSeek credit."
-            if demo_mode else "IIUM Gombak accessibility API. Building persistence requires an adapter."
+            if demo_mode else "IIUM Gombak accessibility API. PostgreSQL browsing is enabled when DATABASE_URL is configured."
         ),
         debug=False,
         docs_url="/api/docs",
         redoc_url=None,
         openapi_url="/api/openapi.json",
+        lifespan=lifespan,
     )
     api.state.settings = settings
     api.state.place_repository = effective_places
     api.state.demo_mode = demo_mode
     api.state.community_repository = community_repository
     api.state.trust_policy = trust_policy
+    api.state.trust_policy_version = trust_policy_version
     api.state.contribution_budget = contribution_budget if contribution_budget is not None else ChatBudget(
         per_minute=5, per_day=500
     )

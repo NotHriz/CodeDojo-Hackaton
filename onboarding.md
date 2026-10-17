@@ -16,10 +16,19 @@ The user requested an explicit local chatbot demo before database integration. `
 
 ## Current status and decisions
 
+Shared deployment (17 October): all 13 migrations are applied (including the MAINTAIN correction), including a forward correction for excessive Supabase default service-role grants. Shared schema/permissions and empty-data API reads are verified. 183 backend plus 5 audit tests pass. No collected dataset is imported; restricted runtime credentials and hosting/Auth/AI rehearsal remain pending. The applied correction is published for PR review on chore/deploy-supabase-schema; see DATABASE_HANDOFF.md.
+
+
+Frontend follow-up (17 October): chat with source cards and structured filters, clearing submission/votes, and paginated report history are implemented on feat/frontend-community-flows, prepared for PR review. Build, four helper tests and contract-driven Edge checks pass. No real Auth/provider/database rehearsal or shared writes occurred. See frontend/INTEGRATION.md.
+
+
+Policy agreement (17 October): `iium-gombak-pilot-v1` requires 3 distinct supporters, support weight at least 3, support share at least 67% exactly and individual weight at most 2. Everyone starts at 1; promotion remains unagreed. The same policy governs clearing claims. Local settings select this experimental policy through COMMUNITY_POLICY_VERSION; committed defaults remain disabled. New selection code is prepared for PR review on feat/versioned-trust-policy; PR #28's transactional snapshot binding is merged. Existing incompatible snapshots block voting. No automatic reputation updates or accuracy guarantees.
+
+
 - The team has three members and a 24-hour build window.
 - The chosen working track is Persons with Disabilities (PWD), narrowed to wheelchair access.
 - Akses Campus is the working project name. IIUM Gombak and English-only initial UI are confirmed; exact collection boundaries remain to be chosen.
-- Backend foundation, building discovery, Supabase JWT verification, DeepSeek tool orchestration, and signed-in community routes/configurable trust functions are implemented with 142 passing tests. Real database adapters, provider configuration, and numerical trust-policy activation remain pending; disconnected routes return explicit 503s. Fictional runtime data is available only through the explicit development demo flag; no paid AI calls, database-owned changes, or frontend changes were made during automated verification. [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) records verification and remaining integration work.
+- Backend foundation, building discovery, Supabase JWT verification, DeepSeek tool orchestration, and signed-in community routes/configurable trust functions are implemented with 164 passing tests with disposable PostgreSQL. Building and transactional community adapters are implemented on the current branch; shared deployment, provider configuration, and numerical trust-policy/version activation remain pending; disconnected routes return explicit 503s. Fictional runtime data is available only through the explicit development demo flag; no paid AI calls, database-owned changes, or frontend changes were made during automated verification. [BACKEND_HANDOFF.md](BACKEND_HANDOFF.md) records verification and remaining integration work.
 - The team prefers Python, is comfortable using JavaScript, and proposed Vue with Tailwind. The implementation baseline below adopts Vue 3, Tailwind, FastAPI, SQLModel, PostgreSQL, and Google Maps from the subsequent stack discussion.
 - Hosting is agreed: Netlify Free frontend, Render Free Python backend, and Supabase PostgreSQL/Auth/Storage. Accounts, credentials, and deployments are not configured yet.
 - The user selected DeepSeek and has approximately US$2 credit. Recommended model: `deepseek-flash` with thinking disabled. Search and place questions are MVP scope; conversational report drafting is stretch scope. Implemented backend schemas are documented in contracts/chat.md; teammate integration review remains pending.

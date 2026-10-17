@@ -2,7 +2,9 @@
 
 Owner: the user (backend). Teammate 3 owns `app/models.py` and `app/database.py`; agree their interfaces before backend services depend on them. See [file ownership and handoffs](../COLLABORATION.md).
 
-The FastAPI foundation, building list/details API, Supabase token verification, bounded DeepSeek chat, signed-in report/clearing submissions, vote routes, and configurable trust functions are implemented. Database adapters and policy activation remain pending. `app/models.py` and `app/database.py` are database-owned placeholders. Disconnected features return explicit 503s; tests alone use in-memory adapters and mocked providers.
+The FastAPI foundation, building list/details API, Supabase token verification, bounded DeepSeek chat, signed-in report/clearing submissions, vote routes, and configurable trust functions are implemented. Configuring `DATABASE_URL` now connects building browsing through SQLModel/Psycopg to the migrated `public.place_detail_records` view. Transactional community persistence is now implemented and wired to the configured database; voting-policy/version activation and shared deployment remain pending. Unconfigured features return explicit 503s.
+
+Apply reviewed migrations separately before starting the API and import checked campus data through the database seed workflow. Startup never creates tables or inserts fixtures. Use a backend-only PostgreSQL connection with the service-role table/view permissions, not a Supabase HTTP URL or API key. Sessions close after each repository operation; shutdown disposes the pool. A configured database failure returns a sanitized error and never falls back to fictional records. Shared deployment and real campus imports have not been performed.
 
 ## Local development
 
@@ -38,7 +40,7 @@ Set-Location backend
 
 To generate the same report locally from `backend`, run `.venv/Scripts/python.exe -m pytest -q --junitxml=test-results.xml`. The report is ignored by Git. Workflow definition: [backend.yml](../.github/workflows/backend.yml).
 
-All 142 tests pass across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
+All 183 tests pass with disposable PostgreSQL configured across foundation, building discovery, real JWT signatures, read-only chatbot tools/citations/failures, signed-in contributions, idempotency contracts, weighted quorums, restrictions, and independent clearing observations. `requirements.in` records direct runtime dependency ranges; `requirements.txt` pins the resolved runtime environment and `requirements-dev.txt` pins the test environment. Regenerate and verify pins deliberately when upgrading. Starlette currently emits a test-only HTTPX deprecation warning; it does not fail the suite.
 
 Authentication handoff: [contracts/auth.md](../contracts/auth.md). Set `SUPABASE_URL`, configure ES256/RS256 signing keys in Supabase, and send bearer tokens to `/api/auth/me`. Only the verified user UUID is returned. Legacy HS256 tokens are unsupported; immediate token revocation and live contribution restrictions are not implemented.
 
@@ -46,7 +48,7 @@ Chat handoff: [contracts/chat.md](../contracts/chat.md). `POST /api/chat` uses D
 
 ## Local chatbot demo without Supabase
 
-To test real DeepSeek responses before the database adapter is ready, explicitly enable fictional building data in your ignored `backend/.env`:
+To test real DeepSeek responses without a configured database, explicitly enable fictional building data in your ignored `backend/.env`:
 
 ```dotenv
 APP_ENV=development
@@ -103,6 +105,22 @@ Agree trust thresholds and shared schemas before implementing the services. Regi
 
 Implemented: `GET /api/places` with name/category/campus and required-facility filters, stable sorting, and pagination; `GET /api/places/{place_id}` with entrance/observation/evidence fields and active warnings. Required facilities match only `yes`; warnings never remove matches; no matches never relax filters.
 
-Next handoff: teammate 3 provides a persistence adapter implementing `PlaceRepository` and teammate 1 reviews [response examples](../contracts/places.md). The backend owner then wires that adapter into `create_app`. No database-owned files or frontend files were changed for this feature. Schema review, actual data access, and end-to-end external integration remain pending.
+Connected browsing now uses `PostgresPlaceRepository` when `DATABASE_URL` is set. The disposable PostgreSQL runner verifies service-role HTTP list/details, persistence across app recreation and explicit database failures. The Vue browser smoke check verifies SQL-backed details and warnings even when reports return 503. Next: real community persistence and reviewed policy, checked campus data and shared deployment. See [DATABASE_HANDOFF.md](../DATABASE_HANDOFF.md).
 
 See [project README](../README.md) and [onboarding](../onboarding.md) for scope and acceptance criteria.
+
+## Transactional community persistence
+
+When `DATABASE_URL` supplies the configured building adapter, the app also wires `PostgresCommunityRepository` over the same lazy engine. Explicitly injected adapters retain precedence. No migration or connection opens at import time. The eleven accepted migrations must already exist in the target; credentials alone do not create tables. Reports and clearing observations can persist without a voting policy. Votes require both a reviewed `TrustPolicy` and a nonblank version supplied through `create_app(trust_policy=reviewed_policy, trust_policy_version=reviewed_version)`; there are no active default thresholds. The agreed named pilot can be selected explicitly with COMMUNITY_POLICY_VERSION as described below.
+
+Mutations lock/materialize the contributor row, recheck restrictions and fresh private weight, then lock the pilot report and clearing target. Creation retries use normalized payload digests and the existing scoped keys. Evidence, vote replacements, derived statuses and append-only history commit together. A return value is not sent until commit succeeds. Version/threshold mismatches with existing report/clearing votes return 409, requiring a separate reviewed policy migration. Restriction writers must upsert/lock the same contributor row before locking targets; do not implement missing-row restrictions through an unlocked absence check.
+
+The history endpoint preserves repository sequence order for equal timestamps. Source DTOs exclude private author, actor, retry, weight and policy fields. This implements storage/transactions, not automatic reputation learning, collusion prevention, new-barrier recurrence rules or expiry.
+
+For PostgreSQL integration tests, provision a fresh **local-only** database named `akses_community_test` and set `COMMUNITY_TEST_DATABASE_URL` in that shell before running pytest. The test fixture refuses non-loopback hosts and any other database name, refuses existing public tables, applies all thirteen migrations and test-only role fixtures, and runs the adapter as `service_role`. Never use a shared database URL. Recreate the disposable cluster between full runs because roles/schema are retained for diagnosis. CI provisions its own PostgreSQL 17 service and runs these tests without shared secrets. Without the dedicated test URL, seventeen integration cases skip; the passing full local run included all 183 cases with no skips.
+
+## Agreed pilot policy configuration
+
+`COMMUNITY_POLICY_VERSION=iium-gombak-pilot-v1` selects the agreed experimental policy: three distinct supporters, supporting weight at least three, support share at least 0.67, and a maximum individual weight of two. Use the same rules for clearing claims. New accounts start at one; no promotion mechanism or agreement-based rewards/penalties are introduced. Higher-weight assignment still needs agreement. Community corroboration is not an accuracy or safety guarantee.
+
+The optional [policy configuration example](community-policy.env.example) keeps `disabled` as its default. Copy the selected setting into ignored `backend/.env` or hosting configuration; restart the backend. The local ignored file is now explicitly activated, but no shared database migration/configuration was applied. Unknown version values fail startup; named thresholds cannot be changed under the same version even through explicit constructor injection. Votes and history retain exact version/threshold snapshots, and incompatible targets remain blocked with 409 until a reviewed migration.

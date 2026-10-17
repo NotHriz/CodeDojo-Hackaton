@@ -1,0 +1,92 @@
+{
+  "campuses": [
+    {
+      "id": "iium-gombak",
+      "name": "IIUM Gombak"
+    }
+  ],
+  "buildings": [
+    {
+      "id": "kamal-hassan-library",
+      "campus_id": "iium-gombak",
+      "name": "Kamal Hassan Library",
+      "category": "study",
+      "description": "Formerly Dar al-Hikmah Library.",
+      "coordinates": {
+        "latitude": 3.2509758,
+        "longitude": 101.7362327
+      },
+      "facilities": {
+        "step_free_entrance": "unknown",
+        "accessible_toilet": "unknown",
+        "designated_parking": "unknown"
+      }
+    },
+    {
+      "id": "iium-cultural-centre",
+      "campus_id": "iium-gombak",
+      "name": "IIUM Cultural Centre",
+      "category": "assembly",
+      "description": "Also known as ICC.",
+      "coordinates": {
+        "latitude": 3.25151,
+        "longitude": 101.73245
+      },
+      "facilities": {
+        "step_free_entrance": "unknown",
+        "accessible_toilet": "unknown",
+        "designated_parking": "unknown"
+      }
+    },
+    {
+      "id": "sultan-ahmad-shah-mosque",
+      "campus_id": "iium-gombak",
+      "name": "Sultan Haji Ahmad Shah Mosque",
+      "category": "worship",
+      "description": "IIUM Gombak central mosque.",
+      "coordinates": {
+        "latitude": 3.25136,
+        "longitude": 101.73494
+      },
+      "facilities": {
+        "step_free_entrance": "unknown",
+        "accessible_toilet": "unknown",
+        "designated_parking": "unknown"
+      }
+    },
+    {
+      "id": "kulliyyah-of-engineering",
+      "campus_id": "iium-gombak",
+      "name": "Kulliyyah of Engineering",
+      "category": "academic",
+      "description": "Also known as KOE.",
+      "coordinates": {
+        "latitude": 3.25265,
+        "longitude": 101.73184
+      },
+      "facilities": {
+        "step_free_entrance": "unknown",
+        "accessible_toilet": "unknown",
+        "designated_parking": "unknown"
+      }
+    },
+    {
+      "id": "kulliyyah-of-ict",
+      "campus_id": "iium-gombak",
+      "name": "Kulliyyah of Information and Communication Technology",
+      "category": "academic",
+      "description": "Also known as KICT.",
+      "coordinates": {
+        "latitude": 3.254,
+        "longitude": 101.7296
+      },
+      "facilities": {
+        "step_free_entrance": "unknown",
+        "accessible_toilet": "unknown",
+        "designated_parking": "unknown"
+      }
+    }
+  ],
+  "entrances": [],
+  "observations": []
+}
