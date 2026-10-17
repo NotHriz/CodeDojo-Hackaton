@@ -32,7 +32,7 @@ def main():
             assert not report['missing_roles'] and report['custom_policy_count'] == 0
             assert not report['mapped_column_issues']
             assert not report['unexpected_public_relations']
-            assert len(report['local_migrations']) == 11
+            assert len(report['local_migrations']) == 12
             assert report['public_record_samples']['place_detail_records']['checked'] == 1
             assert all(sample['exact_public_fields'] for sample in report['public_record_samples'].values())
             # The local runner intentionally does not impersonate CLI migration history.

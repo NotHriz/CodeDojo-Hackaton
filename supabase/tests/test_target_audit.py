@@ -16,10 +16,10 @@ from pydantic import SecretStr
 class TargetAuditTests(unittest.TestCase):
     def test_inventory_matches_versioned_source(self):
         migrations, tables, views = inspect_target.inventory()
-        self.assertEqual(len(migrations), 11)
+        self.assertEqual(len(migrations), 12)
         self.assertEqual(len(tables), 14)
         self.assertEqual(len(views), 7)
-        self.assertEqual(len({row['version'] for row in migrations}), 11)
+        self.assertEqual(len({row['version'] for row in migrations}), 12)
         self.assertTrue(all(len(row['sha256']) == 64 for row in migrations))
 
     def test_connection_error_never_prints_driver_message_or_secret(self):

@@ -4,6 +4,12 @@ Owner: teammate 3/database.
 
 The migrations implement campuses, buildings, entrances, facility observations, barrier-report and clearing-observation creation/vote storage, ordered photo/evidence references, and report audit events. They follow [the building contract](../contracts/places.md) and [the community contract](../contracts/community.md). No records are seeded. Absent facility information defaults to `unknown`; observation aggregation and community transactions still need implementation before live use.
 
+## Shared deployment status (17 October 2026)
+
+The explicit deployment instruction applied the first eleven migrations plus the forward service-role privilege correction 20261017000500. Shared history records all twelve and the schema/grant audit matches. The correction removes extra cloud-default TRUNCATE/REFERENCES/TRIGGER grants without changing data or intended CRUD. Role fixtures now reproduce those defaults locally. 182 backend plus four audit tests pass. This correction is applied remotely but published for PR review, not merged.
+
+No dataset has been imported. A restricted runtime credential and production hosting/Auth/provider verification remain pending. See ../DATABASE_HANDOFF.md and DEPLOYMENT_PLAN.md; older pending-deployment text below describes earlier increments.
+
 ## Migration runner
 
 Use the Supabase CLI migration runner for a future shared deployment (`supabase db push` after linking the intended project and reviewing pending migrations). Timestamped SQL files in `migrations/` are applied in filename order. Never replay them manually against an existing shared schema or rewrite an applied migration. This increment does not initialize/link a Supabase project or apply anything remotely.

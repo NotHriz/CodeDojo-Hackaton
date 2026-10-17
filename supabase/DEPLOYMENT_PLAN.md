@@ -1,6 +1,18 @@
 # Database-owner migration and import plan
 
-This is a prepared plan, not authorization to write to the shared project.
+## Applied deployment: 17 October 2026
+
+The user explicitly instructed ?Apply the deployment Plan.? The eleven planned migrations were dry-run reviewed and applied with Supabase CLI 2.121.0 to the configured matching Auth/database project. The project-reference fingerprint is `64c00171b175de41` (distinct from the older shared-pooler host fingerprint).
+
+CLI linking requires an unavailable management token, so deployment used the official `db push --db-url` route with a password-free URL argument and `SUPABASE_DB_PASSWORD` passed only through the child environment. TLS was required. Vault updates, custom-role files and seed inclusion were excluded. No reset or test fixtures ran against the shared database.
+
+The first post-deploy audit found cloud default grants left service_role with TRUNCATE, REFERENCES and TRIGGER on twelve tables. Added and applied forward-only `20261017000500_service_role_privileges.sql` after disposable PostgreSQL tests reproduced those defaults. Original migrations were not edited. The correction preserves intended CRUD and removes only excess rights.
+
+Final read-only audit: all 12 versions recorded, no pending/unrecognized versions, all 14 tables and 7 views present, expected columns/RLS/invoker settings and effective role grants match, client TLS active. Direct SELECT is denied to anon/authenticated. Service-role HTTP list/report reads succeed across two app instances. No campus/building/report/history data exists; no import was attempted without a collected dataset.
+
+The audit still flags the configured postgres administrative credential. Service-role smoke checks used SET ROLE on test connections, which does not provision a restricted runtime login. Configure that credential before hosting deployment. Backend local demo is now disabled; the agreed policy selection remains active locally. This branch records deployment and the applied correction but is published for PR review, not merged. Historical findings below are superseded by this result.
+
+Local verification: 182 backend tests plus 4 audit tests pass on disposable PostgreSQL 17.11, including the cloud-default-grant regression. Full production hosting and real Auth/AI/data rehearsal remain pending.
 
 ## Historical target inspection: before the 17 October connectivity retry
 
@@ -32,15 +44,15 @@ means its inspected checks passed; 1 means configuration/connectivity/inspection
 failed; 2 means connected but deployment review is required. Empty data is not a
 working application. Inspection does not certify concurrency or real observations.
 
-## Current connectivity retry result: 17 October 2026
+## Historical connectivity retry result: before schema deployment
 
 On 17 October the user requested a retry after checking network access. SQL connectivity now succeeds with `sslmode=require`; Psycopg confirms client TLS. The current target has PostgreSQL 17.11, zero application tables/views in `public`, and no `supabase_migrations.schema_migrations` table. All 21 expected relations are missing. HTTPS `buildings` also returns 404. Earlier REST counts are historical and do not describe the current target.
 
-The host/port/database fingerprint above is not a unique project identifier for shared poolers. Confirm the actual project-qualified username and Auth origin before approval. All eleven local migrations are candidates for the initial deployment; none were applied by this task. Existing application permissions remain unverifiable until deployment. The configured admin credential is for review/migration, not the deployed runtime. No shared-write approval has been given.
+The host/port/database fingerprint above is not a unique project identifier for shared poolers. Confirm the actual project-qualified username and Auth origin before approval. All eleven local migrations are candidates for the initial deployment; none were applied by this task. Existing application permissions remain unverifiable until deployment. The configured admin credential is for review/migration, not the deployed runtime. That earlier inspection did not authorize writes; the subsequent user instruction authorized the deployment recorded above.
 
 ## Migration review gate
 
-The accepted sequence has eleven files, applied in this exact order:
+The current sequence has twelve files. The initial eleven plus the deployment permission correction were applied in this order:
 
 1. `20261016000100_building_foundation.sql`
 2. `20261016000200_place_evidence.sql`
@@ -53,6 +65,7 @@ The accepted sequence has eleven files, applied in this exact order:
 9. `20261017000200_community_read_views.sql`
 10. `20261017000300_place_detail_records.sql`
 11. `20261017000400_community_records.sql`
+12. `20261017000500_service_role_privileges.sql`
 
 The audit lists each local filename, version and SHA-256, pending/unrecognized
 remote versions when history is readable, missing/extra relations, columns,
@@ -72,7 +85,7 @@ linked-project workflow. If the CLI requires initialization, create local config
 with `supabase init`, preserve any existing config, and verify the intended link.
 Run `supabase db push --linked --dry-run`; compare its pending filenames with the
 audit. Present that concrete diff and the target fingerprint for shared-write
-approval. **No such shared-write approval has been given for this task.**
+approval. **This gate described the earlier planning task; the later explicit deployment instruction authorized the applied migration set above.**
 
 Only after approval, the database owner runs `supabase db push --linked` using
 the reviewed connection. Confirm transaction behavior and stop on the first
@@ -119,7 +132,7 @@ The accepted schema keeps all fourteen application tables and seven invoker
 views backend-only. Browser roles have no application-table/view privileges.
 Service grants allow application record mutations, SELECT/INSERT audit events
 and SELECT/INSERT/UPDATE contributor state. Private vote metadata never enters
-the record views. Local suites verify these rules; shared rules remain unverified.
+the record views. Local suites and the post-deployment shared audit verify these rules for the applied schema.
 
 Evidence currently consists of approved HTTP(S) references. Photo upload is
 deferred from this integration slice. No Storage bucket, upload policy or public

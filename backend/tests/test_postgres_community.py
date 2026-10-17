@@ -326,3 +326,16 @@ def test_named_policy_writes_exact_version_and_threshold_snapshots(connected):
     # A new deployment cannot silently relabel existing snapshots.
     with pytest.raises(PolicyConflict):
         original.cast_vote(report.id, uuid4(), VoteStance.CORROBORATE, 1, POLICY)
+
+
+def test_cloud_default_grants_are_narrowed_to_application_contract(local_database):
+    admin, _ = local_database
+    assert scalar(admin, """SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind IN ('r','v')
+        AND has_table_privilege('service_role', c.oid, 'TRUNCATE,REFERENCES,TRIGGER')""") == 0
+    assert scalar(admin, """SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind='r' AND c.relname NOT IN ('contributor_state','report_events')
+        AND has_table_privilege('service_role',c.oid,'SELECT')
+        AND has_table_privilege('service_role',c.oid,'INSERT')
+        AND has_table_privilege('service_role',c.oid,'UPDATE')
+        AND has_table_privilege('service_role',c.oid,'DELETE')""") == 12
