@@ -59,6 +59,8 @@ Open a small Pull Request into `main` and tag the backend owner for the table ab
 
 ## Chat, clearing and history integration (17 October 2026)
 
+PR #30 review regression: submitting a separate barrier after a failed clearing attempt must preserve the existing card's description, observation timestamp, open history and complete retry identity. The browser smoke test reproduces the failure with the old full reload and passes after switching successful building-level submissions/votes to `refreshCommunity()`. It also checks that the additional warning reaches the list and that resolving one barrier retains the other warning.
+
 The current full-stack task connects POST /api/chat, clearing submission/vote endpoints and GET report history through the existing API client. No new backend contracts or dependencies. Google Maps continues to render only matching `places`, not all cited `sources`; editable interpreted filters include category and the three implemented facilities. Source records retain unknowns, warning labels and available check dates. AI errors retain the question and do not replace it with a canned answer.
 
 Clearing submission uses the signed-in session and a retry UUID with a stable observation timestamp/body. The form retains failed input; votes show explicit 403/409/429/503 errors. Successful contributions refresh report counts/status, source building warnings and map/list warning summaries without resetting other drafts or moving focus. History preserves API order and uses offset pagination. Public history and ordinary browsing remain available signed out; writes remain enforced by backend identity checks.

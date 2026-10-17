@@ -74,10 +74,10 @@ async function refreshCommunity() {
 // WORDS for report statuses (shown instead of raw codes)
 const REPORT = { unverified: 'Unverified', community_corroborated: 'Community corroborated', disputed: 'Disputed', resolved: 'Resolved' }
 
-// VOTING: kind is 'reports' (backend ready) or 'observations' (backend must add). Reloads to show new counts.
+// Refresh counts without unmounting other reports or discarding their drafts.
 async function vote(kind, id, stance) {
   error.value = ''; done.value = ''
-  try { await castVote(kind, id, stance); done.value = 'Your vote was saved.'; await load() }
+  try { await castVote(kind, id, stance); done.value = 'Your vote was saved.'; await refreshCommunity() }
   catch (e) { error.value = e.message }
 }
 
@@ -95,7 +95,7 @@ async function submit() {
       await submitReport({ place_id: props.id, barrier_type: 'temporary_barrier', description: form.description, observed_at: new Date().toISOString(), evidence_urls }, idem)
     idem = crypto.randomUUID(); form.description = ''; form.file = null
     done.value = 'Thank you. Your information was sent and is unverified until others vote.'
-    await load()
+    await refreshCommunity()
   } catch (e) { error.value = e.message } finally { busy.value = false }
 }
 

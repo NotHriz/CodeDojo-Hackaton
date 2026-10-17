@@ -1,5 +1,7 @@
 # Frontend integration follow-up, 17 October 2026
 
+PR #30 review fix: successful building-level submissions/votes now use the non-destructive community refresh. A browser regression first reproduced clearing-draft loss after another barrier submission, then passed with the fix. It verifies draft text, observation timestamp, open history, retry UUID/body and map warning refresh across that separate submission. Production build and four helper tests pass. These remain intercepted UI checks; real external-service rehearsal is still pending.
+
 On feat/frontend-community-flows (prepared for PR review), the full-stack task adds public chat/source cards and structured map/list filters, authenticated clearing submissions/votes, and public paginated history. API paths/DTOs are unchanged. Mutation refresh preserves drafts/focus; clearing retry identity and timestamp are stable. Four helper tests, production build and contract-driven Edge browser checks pass. Browser replies are intercepted fixtures, not a live Auth/provider/database rehearsal. No shared writes or paid AI calls occurred. PRs #28/#29 are merged; shared schema/runtime verification and deployed rehearsal remain pending. See frontend/INTEGRATION.md for test commands and deferred endpoints.
 
 Earlier handoffs below are historical; this section supersedes missing frontend-flow statements.

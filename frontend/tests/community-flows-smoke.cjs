@@ -11,7 +11,10 @@ const user = { id: userId, aud: 'authenticated', role: 'authenticated', email: '
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url')
 const token = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: userId, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated' })}.test-only`
 const report = { id: reportId, place_id: 'hub', campus_id: 'iium-gombak', barrier_type: 'blocked_ramp', description: 'Fictional blocked ramp', observed_at: time, submitted_at: time, evidence_urls: [], status: 'community_corroborated', community: { supporters: 3, disputes: 0 }, clearance_observations: [] }
-const warning = () => report.status === 'resolved' ? [] : [{ report_id: reportId, description: report.description, status: report.status }]
+let addedReport = null
+const warning = () => [report, ...(addedReport ? [addedReport] : [])]
+  .filter(item => item.status !== 'resolved')
+  .map(item => ({ report_id: item.id, description: item.description, status: item.status }))
 const place = (id, name, toilet, category) => ({ id, name, campus_id: 'iium-gombak', category, coordinates: { latitude: 3.25, longitude: 101.73 }, facilities: { step_free_entrance: 'yes', accessible_toilet: toilet, designated_parking: 'unknown' }, active_warnings: id === 'hub' ? warning() : [], is_demo: true, description: 'Fictional browser fixture', entrances: [], observations: [{ facility: 'accessible_toilet', value: toilet, source: 'Fictional fixture', observed_at: null, evidence_urls: [], notes: null }] })
 const hub = () => place('hub', 'Fictional Study Hub', 'yes', 'study')
 const library = () => place('library', 'Fictional Library', 'no', 'library')
@@ -61,7 +64,11 @@ async function main() {
       if (path === '/api/places') return reply({ items: [hub(), library()], total: 2, limit: 100, offset: 0 })
       if (path === '/api/places/hub') return reply(hub())
       if (path === '/api/places/library') return reply(library())
-      if (path === '/api/reports') return reply({ items: url.searchParams.get('place_id') === 'hub' ? [report] : [], total: 1, limit: 20, offset: 0 })
+      if (path === '/api/reports' && request.method() === 'POST') {
+        addedReport = { ...request.postDataJSON(), id: '00000000-0000-4000-8000-000000000004', campus_id: 'iium-gombak', submitted_at: time, status: 'unverified', community: { supporters: 0, disputes: 0 }, clearance_observations: [] }
+        return reply(addedReport, 201)
+      }
+      if (path === '/api/reports') return reply({ items: url.searchParams.get('place_id') === 'hub' ? [...(addedReport ? [addedReport] : []), report] : [], total: addedReport ? 2 : 1, limit: 20, offset: 0 })
       return reply({ error: { message: `Unexpected test request ${path}` } }, 404)
     })
     await page.goto(process.argv[4])
@@ -106,6 +113,17 @@ async function main() {
     await card.getByRole('button', { name: 'Submit clearing observation' }).click()
     await card.getByText('Community service unavailable.', { exact: true }).waitFor()
     assert.equal(await card.getByLabel('What has changed?').inputValue(), 'Fictional ramp is clear now')
+    const clearingTime = await card.getByLabel('When did you observe it? (your local time)').inputValue()
+    // A separate successful barrier must not remount this card or discard its
+    // failed clearing submission's draft, timestamp, open history or retry UUID.
+    await page.getByLabel('A temporary barrier', { exact: true }).check()
+    await page.getByLabel('Describe the barrier', { exact: true }).fill('Fictional separate barrier')
+    await page.getByRole('button', { name: 'Send information', exact: true }).click()
+    await page.getByRole('article', { name: 'Barrier report: Fictional separate barrier' }).waitFor()
+    assert.equal(await card.getByLabel('What has changed?').inputValue(), 'Fictional ramp is clear now', 'Separate barrier preserves clearing draft')
+    assert.equal(await card.getByLabel('When did you observe it? (your local time)').inputValue(), clearingTime)
+    assert.equal(await card.getByRole('list', { name: 'Report timeline' }).isVisible(), true, 'Open history survives refresh')
+    await page.getByRole('button', { name: /Fictional Study Hub.*2 active barrier/ }).waitFor()
     await card.getByRole('button', { name: 'Submit clearing observation' }).click()
     await card.getByText('Fictional ramp is clear now', { exact: true }).waitFor()
     assert.deepEqual(clearingRequests[0], clearingRequests[1], 'Retries preserve complete body, timestamp and UUID')
@@ -113,9 +131,12 @@ async function main() {
     await card.getByText('You cannot vote on your own clearing observation.', { exact: true }).waitFor()
     await card.getByRole('button', { name: 'Corroborate clearing' }).click()
     await card.getByRole('heading', { name: 'Resolved', exact: true }).waitFor()
-    await page.waitForFunction(() => !document.querySelector('[aria-label="Active building warnings"]'))
+    await page.waitForFunction(() => {
+      const warnings = document.querySelector('[aria-label="Active building warnings"]')
+      return warnings && !warnings.textContent.includes('Fictional blocked ramp') && warnings.textContent.includes('Fictional separate barrier')
+    })
     await card.getByRole('button', { name: 'Dispute clearing' }).click()
-    await page.getByLabel('Active building warnings').waitFor()
+    await page.getByLabel('Active building warnings').getByText('Fictional blocked ramp', { exact: false }).waitFor()
     await page.setViewportSize({ width: 390, height: 844 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Mobile layout does not overflow')
     assert.deepEqual(errors, [], 'No browser runtime exceptions')
