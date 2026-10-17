@@ -1,3 +1,9 @@
+# Frontend integration follow-up, 17 October 2026
+
+On feat/frontend-community-flows (prepared for PR review), the full-stack task adds public chat/source cards and structured map/list filters, authenticated clearing submissions/votes, and public paginated history. API paths/DTOs are unchanged. Mutation refresh preserves drafts/focus; clearing retry identity and timestamp are stable. Four helper tests, production build and contract-driven Edge browser checks pass. Browser replies are intercepted fixtures, not a live Auth/provider/database rehearsal. No shared writes or paid AI calls occurred. PRs #28/#29 are merged; shared schema/runtime verification and deployed rehearsal remain pending. See frontend/INTEGRATION.md for test commands and deferred endpoints.
+
+Earlier handoffs below are historical; this section supersedes missing frontend-flow statements.
+
 # Versioned policy activation follow-up
 
 The team agreed experimental `iium-gombak-pilot-v1` (3 supporters, support weight 3, exact 67% support share, maximum individual weight 2; everyone starts at 1). The selector and snapshot tests are implemented on `feat/versioned-trust-policy`, prepared for PR review. Local ignored settings select it; restart an existing backend to reload. Committed configuration defaults to disabled. No promotion algorithm, agreement rewards, disagreement penalties or shared database writes were introduced. Shared deployment/runtime verification remains pending. See the [policy contract](contracts/community.md#trust-calculation).

@@ -16,6 +16,9 @@ The user requested an explicit local chatbot demo before database integration. `
 
 ## Current status and decisions
 
+Frontend follow-up (17 October): chat with source cards and structured filters, clearing submission/votes, and paginated report history are implemented on feat/frontend-community-flows, prepared for PR review. Build, four helper tests and contract-driven Edge checks pass. No real Auth/provider/database rehearsal or shared writes occurred. See frontend/INTEGRATION.md.
+
+
 Policy agreement (17 October): `iium-gombak-pilot-v1` requires 3 distinct supporters, support weight at least 3, support share at least 67% exactly and individual weight at most 2. Everyone starts at 1; promotion remains unagreed. The same policy governs clearing claims. Local settings select this experimental policy through COMMUNITY_POLICY_VERSION; committed defaults remain disabled. New selection code is prepared for PR review on feat/versioned-trust-policy; PR #28's transactional snapshot binding is merged. Existing incompatible snapshots block voting. No automatic reputation updates or accuracy guarantees.
 
 
