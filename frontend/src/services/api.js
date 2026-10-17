@@ -19,7 +19,13 @@ async function request(path, { method = 'GET', body, form, idem } = {}) {
   try { res = await fetch(BASE + path, { method, headers, body: form ?? (body ? JSON.stringify(body) : undefined) }) }
   catch { throw new ApiError('Cannot reach the server. Check your connection and try again.', 0) }
   const json = await res.json().catch(() => null)
-  if (!res.ok) throw new ApiError(json?.error?.message ?? `Request failed (${res.status})`, res.status, json?.error?.code)
+  if (!res.ok) { // understands our {error:{message}} shape AND FastAPI's default {detail}
+    const d = json?.detail
+    const msg = json?.error?.message
+      ?? (res.status === 404 ? 'The server does not have this feature yet.' : null)
+      ?? (typeof d === 'string' ? d : d?.[0]?.msg) ?? `Request failed (${res.status})`
+    throw new ApiError(msg, res.status, json?.error?.code)
+  }
   return json
 }
 

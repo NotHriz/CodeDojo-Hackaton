@@ -1,50 +1,77 @@
-# Frontend integration notes
+# Findr frontend: integration notes
 
-## Run it
+## Run
 ```bash
-# Terminal 1: backend with fictional demo buildings (see backend/README.md "local chatbot demo")
-cd backend && DEMO_DATA_ENABLED=true uvicorn app.main:app --reload --port 8000
-# Terminal 2: frontend
-cd frontend && cp .env.example .env   # fill in the Supabase and Google Maps values
-npm install && npm run dev            # http://localhost:5173
+cd frontend && cp .env.example .env     # fill VITE_SUPABASE_* (Google keys are no longer used)
+npm install && npm run dev              # http://localhost:5173
+# backend with fictional buildings: DEMO_DATA_ENABLED=true uvicorn app.main:app --reload --port 8000
 ```
-No mock data is built in. If the backend is down, the pages show an error and a "Try again" button.
 
-## Changes to the repo
-| Action | Path |
+## Where to edit
+| What | File |
 | --- | --- |
-| Delete | `frontend/src/**/.gitkeep` (already removed in this version) |
-| Replace | `frontend/.env.example` (same names, comments added, `VITE_API_BASE_URL` empty in dev) |
-| Add | everything else in `frontend/` plus `package-lock.json` after `npm install` |
-| Edit | nothing outside `frontend/`. Backend, `contracts/` and `supabase/` are untouched |
+| Site name, **logo path** (`LOGO_SRC`) | `src/config.js` (put the image in `frontend/public/`, e.g. `'/logo.png'`) |
+| Colours (blue, navy, yellow stripes) | `src/style.css` |
+| Blue/white curve + stripes layout | `src/components/HeroShell.vue` |
+| Home / About text | `src/views/HomeView.vue`, `AboutView.vue` |
+| Help questions and ticket topics | `src/views/HelpView.vue` |
+| Which pages need login | `src/router.js` (`meta.auth`) |
 
-## What the backend/database owners must add
-Frontend calls these. Items marked **missing** return an error in the UI until they exist.
+## Pin-pointing the 7 areas on the map
+Pins are drawn from each building's `coordinates` in the backend, so the 7 areas become pins when they exist in the data.
+1. Run `npm run dev` and open Explore. In dev mode, **click the map** where an area is: a popup shows `latitude, longitude`.
+2. Check the spot against Google Maps or openstreetmap.org (right-click -> copy coordinates).
+3. Give the 7 names and coordinates (5 decimals is about 1 m) to the database teammate for `seed/`, with category and facilities.
+   For local testing only, the backend's fictional list is `backend/app/services/demo_places.py`.
+4. Reload: each building appears as a pin and in the list. Selecting either one selects the same building.
+Change the opening view with `START` and the zoom in `src/components/MapView.vue`.
 
-| Need | Status | Proposed |
-| --- | --- | --- |
-| `GET /api/places`, `/api/places/{id}`, `/api/reports`, report votes, `POST /api/reports` | exists | used as documented in `contracts/` |
-| Facilities `lift`, `braille`, `flashing_fire_alarm`, `tactile_paving` | **missing** (only 3 facilities exist) | add to `schemas.py` facility names |
-| Submit facility info | **missing** | `POST /api/places/{id}/observations` `{facility, value, notes, observed_at, evidence_urls}` + `Idempotency-Key` |
-| Vote on facility info | **missing** | `POST /api/observations/{id}/votes` `{stance}`; observations need an `id` |
-| Photo upload | **missing** | `POST /api/uploads` multipart `file` -> `{url}` (Supabase Storage, check type/size) |
-| Username login | **missing** | `POST /api/auth/resolve-username` `{username}` -> `{email}` (rate-limit it, it can reveal emails) |
-| Unique usernames | **missing** | enforce in the database, usernames are only stored in Supabase user metadata now |
-| Support tickets | **missing** | `POST /api/tickets` `{category, subject, message}` (signed in) |
-| Supabase email template | setting | include `{{ .Token }}` so the sign-up email carries the 6-digit code |
+## Help tickets: why it failed and the fix
+The frontend was calling `POST /api/tickets`, which the backend does not have, so every send had to fail. The frontend now shows
+a clear message and reads FastAPI errors correctly, and the form limits match the schema below. To make it work, the backend owner adds:
+```python
+# backend/app/routers/tickets.py  (adapt names to your code, then app.include_router(tickets.router))
+from typing import Protocol
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field
+from app.routers.auth import CurrentUser
+
+router = APIRouter(prefix="/api/tickets", tags=["tickets"])
+
+class TicketIn(BaseModel):
+    model_config = {"extra": "forbid"}
+    category: str = Field(min_length=1, max_length=64)
+    subject: str = Field(min_length=3, max_length=120)
+    message: str = Field(min_length=10, max_length=2000)
+
+class TicketRepository(Protocol):          # the database teammate implements this
+    def create_ticket(self, user_id: str, data: TicketIn) -> str: ...
+
+@router.post("", status_code=201)
+def create_ticket(body: TicketIn, user: CurrentUser, request: Request):
+    repo = getattr(request.app.state, "ticket_repository", None)
+    if repo is None:
+        raise HTTPException(503, "Support tickets are not connected yet.")
+    return {"id": repo.create_ticket(str(user.id), body)}
+```
+```sql
+create table tickets (
+  id uuid primary key default gen_random_uuid(), user_id uuid not null,
+  category text not null, subject text not null, message text not null,
+  status text not null default 'open', created_at timestamptz not null default now());
+```
+The other missing endpoints (facility info, observation votes, uploads, username lookup) are listed in `src/services/api.js` under PROPOSED.
 
 ## Git (follows COLLABORATION.md)
 ```bash
 git switch main
 git pull --ff-only origin main
-git switch -c feat/frontend-ui
-
-# copy this frontend/ folder over the repo's frontend/ folder, then:
+git switch -c feat/frontend-redesign
+# replace the repo's frontend/ folder with this one, then:
 cd frontend && npm install && npm run build && cd ..
-
-git status                      # only frontend/ should be listed
+git status                 # only frontend/ should be listed
 git add frontend
-git commit -m "feat(frontend): add search, map, accessibility settings, auth, profile and help pages"
-git push -u origin feat/frontend-ui
+git commit -m "feat(frontend): Findr redesign, login-first access, Leaflet map, help center"
+git push -u origin feat/frontend-redesign
 ```
-Open a small Pull Request into `main` and tag the backend owner for the table above. If the push is rejected: `git pull --rebase origin main`, fix conflicts, `git add <file>`, `git rebase --continue`, push again.
+If you already committed the previous version, the same steps work: the new branch just contains the changed files.
