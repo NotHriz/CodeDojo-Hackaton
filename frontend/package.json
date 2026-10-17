@@ -1,14 +1,20 @@
 {
-  "name": "akses-campus-frontend",
+  "name": "findr-frontend",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.1.0",
     "@supabase/supabase-js": "^2.45.0",
     "vue": "^3.5.0",
-    "vue-router": "^4.4.0"
+    "vue-router": "^4.4.0",
+    "leaflet": "^1.9.4",
+    "@fontsource/comfortaa": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",

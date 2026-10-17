@@ -4,8 +4,9 @@
 @theme {
   --font-sans: "Atkinson Hyperlegible", system-ui, sans-serif;
   --color-ink: #14213d;    /* text and borders */
-  --color-paper: #f4f6fa;  /* page background */
-  --color-brand: #0b5394;  /* header and buttons */
+  --color-paper: #eef3fb;  /* light panel behind Explore/Help/Profile */
+  --color-brand: #2b5099;  /* big blue card and buttons (from the design image) */
+  --color-navy: #14203f;   /* dark page background */
   --color-yes: #14632f;    /* "Yes" status (always shown with an icon + word) */
   --color-no: #9b1c1c;     /* "No" status */
   --color-unknown: #475569;
@@ -14,7 +15,11 @@
 /* COLOUR-BLIND MODE: swaps green/red for blue/orange. Set by useA11y.js via data-cb. */
 :root[data-cb="on"] { --color-yes: #00508f; --color-no: #b34700; }
 
-body { @apply bg-paper font-sans text-ink; }
+body { @apply bg-brand font-sans text-ink; }
+.font-display { font-family: "Comfortaa", "Atkinson Hyperlegible", sans-serif; } /* big titles */
+
+/* YELLOW STRIPES: only used by HeroShell (Home, About, Log in). Change the colour or the 12px/28px widths here. */
+.stripes { background: repeating-linear-gradient(135deg, #f5b700 0 12px, transparent 12px 28px); }
 
 /* Keyboard focus ring. Removing it makes keyboard use impossible. */
 :focus-visible { outline: 3px solid #0b5394; outline-offset: 3px; }
@@ -22,6 +27,7 @@ body { @apply bg-paper font-sans text-ink; }
 /* Reusable pieces. Edit once, every page changes. */
 @layer components {
   .btn { @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 font-bold text-white disabled:opacity-60; }
+  .pill-btn { @apply inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-white/70 px-5 font-bold uppercase tracking-wide; }
   .btn-alt { @apply inline-flex min-h-11 items-center justify-center rounded-lg border-2 border-brand px-4 font-bold text-brand; }
   .input { @apply mt-1 min-h-12 w-full rounded-lg border-2 border-ink bg-white px-3; }
   .card { @apply rounded-lg border-2 border-ink bg-white p-4; }

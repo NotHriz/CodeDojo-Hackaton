@@ -1,57 +1,49 @@
 <script setup>
-// GOOGLE MAP: one marker per building. Clicking (or pressing Enter on) a marker selects that building.
-// Needs VITE_GOOGLE_MAPS_API_KEY and VITE_GOOGLE_MAPS_MAP_ID. Without them the list still works.
-import { ref, onMounted, watch } from 'vue'
+// LEAFLET MAP (OpenStreetMap tiles, no API key). One pin per building; clicking or pressing Enter on a pin selects it.
+// Pins come from the backend's building coordinates. In dev mode, clicking empty map shows the coordinates to copy.
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import L from 'leaflet'
+import icon from 'leaflet/dist/images/marker-icon.png'
+import icon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import shadow from 'leaflet/dist/images/marker-shadow.png'
 
 const props = defineProps({ places: Array, selectedId: String })
 const emit = defineEmits(['select'])
 const el = ref(null)
-const error = ref('')
-const KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-const MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID
-const START = { lat: 3.2514, lng: 101.7348 } // CHANGE: where the map opens (IIUM Gombak). Zoom is set below.
-let map, markers = []
+const START = [3.2514, 101.7348] // CHANGE: where the map opens (IIUM Gombak). 16 below is the zoom level.
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+let map, layer
+L.Icon.Default.mergeOptions({ iconUrl: icon, iconRetinaUrl: icon2x, shadowUrl: shadow }) // fixes pin images under Vite
 
-// Loads Google's script once.
-function loadGoogle() {
-  return new Promise((resolve, reject) => {
-    if (window.google?.maps) return resolve()
-    window.__gmReady = resolve
-    const s = document.createElement('script')
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${KEY}&v=weekly&libraries=marker&callback=__gmReady`
-    s.onerror = reject
-    document.head.append(s)
-  })
-}
-
-// Redraws markers whenever the search/filter results change.
+// PINS: redrawn whenever search/filter results change. title/alt = text name for screen readers.
 function draw() {
-  markers.forEach(m => (m.map = null))
-  markers = props.places.map(p => {
-    const m = new google.maps.marker.AdvancedMarkerElement({
-      map, title: p.name, gmpClickable: true, // title = text label for screen readers
-      position: { lat: p.coordinates.latitude, lng: p.coordinates.longitude }
-    })
-    m.addListener('click', () => emit('select', p.id))
-    return m
-  })
+  layer.clearLayers()
+  props.places.forEach(p =>
+    L.marker([p.coordinates.latitude, p.coordinates.longitude], { title: p.name, alt: p.name })
+      .bindTooltip(p.name).on('click', () => emit('select', p.id)).addTo(layer))
+  if (props.places.length) map.fitBounds(layer.getBounds().pad(0.3), { maxZoom: 17, animate: !reduce })
 }
 
-onMounted(async () => {
-  if (!KEY || !MAP_ID) { error.value = 'The map is not configured yet. Use the building list.'; return }
-  try { await loadGoogle(); map = new google.maps.Map(el.value, { center: START, zoom: 16, mapId: MAP_ID }); draw() }
-  catch { error.value = 'The map could not load. Use the building list.' }
+onMounted(() => {
+  map = L.map(el.value).setView(START, 16)
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map)
+  layer = L.featureGroup().addTo(map)
+  draw()
+  // PIN-POINT HELPER (npm run dev only): click anywhere to see "latitude, longitude" for a new pin.
+  if (import.meta.env.DEV) map.on('click', e =>
+    L.popup().setLatLng(e.latlng).setContent(`${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`).openOn(map))
 })
 watch(() => props.places, () => map && draw())
-// Moving the map when a building is chosen from the list keeps both selections in sync.
-watch(() => props.selectedId, id => {
+watch(() => props.selectedId, id => { // list selection moves the map
   const p = props.places.find(x => x.id === id)
-  if (p && map) { map.panTo({ lat: p.coordinates.latitude, lng: p.coordinates.longitude }); map.setZoom(18) }
+  if (p) map.setView([p.coordinates.latitude, p.coordinates.longitude], 18, { animate: !reduce })
 })
+onBeforeUnmount(() => map?.remove())
 </script>
 
 <template>
-  <p v-if="error" class="card">{{ error }}</p>
-  <div v-show="!error" ref="el" role="region" aria-label="Map of buildings. The building list has the same information."
-    class="rounded-lg border-2 border-ink"></div>
+  <div>
+    <div ref="el" role="region" aria-label="Map of buildings. The building list has the same information." class="z-0 h-full min-h-64 rounded-lg border-2 border-ink"></div>
+  </div>
 </template>

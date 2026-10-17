@@ -1,14 +1,20 @@
-# Frontend integration notes
+# Findr frontend: setup and backend connection
 
-## Run it
-```bash
-# Terminal 1: backend with fictional demo buildings (see backend/README.md "local chatbot demo")
-cd backend && DEMO_DATA_ENABLED=true uvicorn app.main:app --reload --port 8000
-# Terminal 2: frontend
-cd frontend && cp .env.example .env   # fill in the Supabase and Google Maps values
-npm install && npm run dev            # http://localhost:5173
+## 1. Fill frontend/.env (this is why log in and the backend did not connect)
 ```
-No mock data is built in. If the backend is down, the pages show an error and a "Try again" button.
+VITE_API_BASE_URL=                       # leave empty in development
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co     # a web address, not a folder path
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable or anon key>  # Supabase > Project Settings > API
+```
+## 2. Start both sides
+```bash
+# Terminal 1 (backend, fictional buildings for testing)
+cd backend && DEMO_DATA_ENABLED=true uvicorn app.main:app --reload --port 8000
+# Terminal 2
+cd frontend && npm install && npm run dev        # http://localhost:5173
+```
+`/api/...` calls are forwarded to port 8000 by `vite.config.js`. Test: http://localhost:8000/api/places must return buildings.
+Response shapes were checked against `backend/app/schemas.py` and `services/community.py` (places, details, reports, votes).
 
 ## Connected browsing increment
 
@@ -26,34 +32,25 @@ Transactional community persistence and policy binding are merged (PRs #28 and #
 | Add | everything else in `frontend/` plus `package-lock.json` after `npm install` |
 | Edit | nothing outside `frontend/`. Backend, `contracts/` and `supabase/` are untouched |
 
-## What the backend/database owners must add
-Frontend calls these. Items marked **missing** return an error in the UI until they exist.
+## 4. Map
+Leaflet + OpenStreetMap (`src/components/MapView.vue`). No API key and no map ID exist or are needed.
+Click the map in dev mode to read coordinates for new pins. Pins appear when the backend returns buildings.
 
-| Need | Status | Proposed |
-| --- | --- | --- |
-| `GET /api/places`, `/api/places/{id}`, `/api/reports`, report votes, `POST /api/reports` | exists | used as documented in `contracts/` |
-| Facilities `lift`, `braille`, `flashing_fire_alarm`, `tactile_paving` | **missing** (only 3 facilities exist) | add to `schemas.py` facility names |
-| Submit facility info | **missing** | `POST /api/places/{id}/observations` `{facility, value, notes, observed_at, evidence_urls}` + `Idempotency-Key` |
-| Vote on facility info | **missing** | `POST /api/observations/{id}/votes` `{stance}`; observations need an `id` |
-| Photo upload | **missing** | `POST /api/uploads` multipart `file` -> `{url}` (Supabase Storage, check type/size) |
-| Username login | **missing** | `POST /api/auth/resolve-username` `{username}` -> `{email}` (rate-limit it, it can reveal emails) |
-| Unique usernames | **missing** | enforce in the database, usernames are only stored in Supabase user metadata now |
-| Support tickets | **missing** | `POST /api/tickets` `{category, subject, message}` (signed in) |
-| Supabase email template | setting | include `{{ .Token }}` so the sign-up email carries the 6-digit code |
+## 5. Still missing in the backend
+Facility info and its votes, photo upload, support tickets (router + SQL are in the earlier notes), the 4 extra facilities
+(lift, braille, flashing_fire_alarm, tactile_paving), and unique usernames. Those buttons show a real error until added.
 
-## Git (follows COLLABORATION.md)
+## 6. Where to edit
+Logo `src/config.js` + `public/Findr.png` | colours and stripes `src/style.css` | stripe length and layout `src/components/HeroShell.vue`
+| white curve `src/App.vue` | nav and button order `src/App.vue` | text `src/views/*`.
+
+## 7. Git
 ```bash
-git switch main
-git pull --ff-only origin main
-git switch -c feat/frontend-ui
-
-# copy this frontend/ folder over the repo's frontend/ folder, then:
-cd frontend && npm install && npm run build && cd ..
-
-git status                      # only frontend/ should be listed
-git add frontend
-git commit -m "feat(frontend): add search, map, accessibility settings, auth, profile and help pages"
-git push -u origin feat/frontend-ui
+git switch main && git pull --ff-only origin main
+git switch -c feat/frontend-polish
+git status                      # frontend/.env must NOT be listed
+git add frontend && git commit -m "feat(frontend): logo, full-screen layout, username login, no sign-up code"
+git push -u origin feat/frontend-polish
 ```
 Open a small Pull Request into `main` and tag the backend owner for the table above. If the push is rejected: `git pull --rebase origin main`, fix conflicts, `git add <file>`, `git rebase --continue`, push again.
 
