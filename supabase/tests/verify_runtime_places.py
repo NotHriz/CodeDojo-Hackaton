@@ -48,7 +48,9 @@ def main():
             assert paged["total"] == 1 and paged["items"] == []
             for missing in ("missing", "seed-test-building' OR '1'='1"):
                 assert client.get(f"/api/places/{missing}").status_code == 404
-            assert client.get("/api/reports", params={"place_id": place["id"]}).status_code == 503
+            reports = client.get("/api/reports", params={"place_id": place["id"]})
+            assert reports.status_code == 200
+            assert reports.json()["items"] == []  # Non-pilot campus is excluded.
             assert engine.pool.checkedout() == 0, "Request sessions must release connections"
     broken = create_app(Settings(database_url="postgresql://postgres:private-test-secret@127.0.0.1:1/postgres", **options))
     with TestClient(broken) as client:

@@ -23,6 +23,7 @@ from app.services.chat import ChatBudget, ChatProvider, DeepSeekProvider
 from app.services.community import CommunityRepository, TrustPolicy
 from app.services.demo_places import DemoPlaceRepository
 from app.services.postgres_places import PostgresPlaceRepository
+from app.services.postgres_community import PostgresCommunityRepository
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ def create_app(
     chat_budget: ChatBudget | None = None,
     community_repository: CommunityRepository | None = None,
     trust_policy: TrustPolicy | None = None,
+    trust_policy_version: str | None = None,
     contribution_budget: ChatBudget | None = None,
 ) -> FastAPI:
     """Build the API without opening database connections or contacting providers."""
@@ -51,6 +53,11 @@ def create_app(
     if effective_places is None and settings.database_url.get_secret_value():
         database = Database(settings.database_url.get_secret_value())
         effective_places = PostgresPlaceRepository(database)
+        if community_repository is None:
+            community_repository = PostgresCommunityRepository(
+                database, policy=trust_policy if trust_policy_version is not None else None,
+                policy_version=trust_policy_version,
+            )
     if effective_places is None and settings.demo_data_enabled:
         effective_places = DemoPlaceRepository()
     demo_mode = isinstance(effective_places, DemoPlaceRepository)

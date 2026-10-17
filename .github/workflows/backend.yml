@@ -18,6 +18,20 @@ jobs:
     name: Python 3.12 backend tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local-test-only
+          POSTGRES_DB: akses_community_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -28,6 +42,7 @@ jobs:
       SUPABASE_URL: ""
       SUPABASE_SERVICE_ROLE_KEY: ""
       DATABASE_URL: ""
+      COMMUNITY_TEST_DATABASE_URL: postgresql://postgres:local-test-only@127.0.0.1:5432/akses_community_test
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
     steps:
       - name: Check out the PR merge commit

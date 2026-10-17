@@ -1,3 +1,11 @@
+# Current backend implementation status
+
+The transactional PostgreSQL CommunityRepository is implemented on `feat/transactional-community`, prepared for PR review and not merged or deployed. Configured building/community adapters share the lazy database engine. All 164 backend tests pass with disposable PostgreSQL, including concurrency and atomic rollback; no shared writes or paid AI requests occurred. See [backend setup](backend/README.md#transactional-community-persistence) and [database status](DATABASE_HANDOFF.md#transactional-community-follow-up).
+
+Voting still requires an explicit reviewed policy and version; there are no active thresholds. Shared target confirmation, eleven-migration deployment, runtime permissions, real Auth/provider checks and frontend integration remain pending. The legacy PostgreSQL SQL runner was also attempted on PostgreSQL 17.11: it stops in the existing foundation test because a protected DELETE produces SQLSTATE 23503 while that test expects 23001. No migration was changed to work around this; the new backend transaction suite passes against the actual target's PostgreSQL major version.
+
+The earlier handoff below is historical; its pending-adapter and test-count statements are superseded by this section.
+
 # Backend integration handoff
 
 Backend/API and integration documentation are implemented. Frontend, Supabase migrations, seed data, `backend/app/models.py`, and `backend/app/database.py` remain with their owners.

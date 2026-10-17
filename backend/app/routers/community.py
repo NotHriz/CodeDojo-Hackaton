@@ -8,7 +8,8 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from app.routers.auth import CurrentUser
 from app.schemas import ErrorResponse
 from app.services.community import (
-    ClearanceCreate, ClearanceResponse, ContributionDenied, IdempotencyConflict,
+    ClearanceCreate, ClearanceResponse, ContributionDenied, ContributionTargetMissing, IdempotencyConflict,
+    InvalidObservationTime, PolicyConflict, PolicyUnavailable,
     ReportCreate, ReportHistoryResponse, ReportListResponse, ReportResponse, VoteInput, eligible_weight,
     utc_now, validate_observation_time,
 )
@@ -54,6 +55,14 @@ def mutate(operation):
     except ContributionDenied:
         # The adapter rechecks restrictions/self-votes inside the transaction.
         raise HTTPException(403, "This contribution is not permitted.") from None
+    except ContributionTargetMissing:
+        raise HTTPException(404, "Contribution target not found.") from None
+    except InvalidObservationTime:
+        raise HTTPException(422, "Observation time is invalid for this event.") from None
+    except PolicyUnavailable:
+        raise HTTPException(503, "Community verification policy and version await configuration.") from None
+    except PolicyConflict:
+        raise HTTPException(409, "This report requires a reviewed policy migration before further voting.") from None
 
 
 @router.get("", response_model=ReportListResponse)
@@ -83,7 +92,8 @@ def report_history(
     adapter = repository(request)
     get_record(adapter, report_id)
     events = [event for event in adapter.list_history(report_id) if event.report_id == report_id]
-    events.sort(key=lambda event: (event.occurred_at, str(event.id)))
+    # Stable sorting retains the repository's sequence order for equal times.
+    events.sort(key=lambda event: event.occurred_at)
     return ReportHistoryResponse(items=events[offset:offset + limit], total=len(events), limit=limit, offset=offset)
 
 
