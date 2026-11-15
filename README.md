@@ -140,11 +140,33 @@ README.md
 onboarding.md
 ```
 
-## Setup readiness
+## Run locally
 
-Backend installation, startup, and test commands are available in [backend/README.md](backend/README.md). Frontend tooling has not been scaffolded; no `npm run dev` command is available yet. Health is process liveness only, not database/AI readiness.
+Start the backend and frontend in two PowerShell terminals from the repository root. Use Python 3.12 and Node.js/npm. The frontend proxies `/api` requests to the local FastAPI server.
 
-See the [frontend skeleton notes](frontend/README.md), [backend skeleton notes](backend/README.md), and [seed-data guidance](seed/README.md). Environment examples are committed; local `.env` files, dependencies, build output, and Python caches are ignored.
+**Terminal 1 — backend:**
+
+```powershell
+py -3.12 -m venv backend/.venv
+backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
+Copy-Item backend/.env.example backend/.env  # only if backend/.env does not already exist
+Set-Location backend
+.venv/Scripts/python.exe -m uvicorn app.main:app --reload
+```
+
+The API runs at `http://localhost:8000`; health is at `http://localhost:8000/api/health` and interactive docs are at `http://localhost:8000/api/docs`.
+
+**Terminal 2 — frontend:**
+
+```powershell
+npm ci --prefix frontend
+Copy-Item frontend/.env.example frontend/.env  # only if frontend/.env does not already exist
+npm run dev --prefix frontend
+```
+
+Open the local URL printed by Vite (usually `http://localhost:5173`). Keep `.env` files local and never put database, Supabase service-role, or AI secrets in frontend `VITE_*` variables. Backend liveness does not mean Supabase or DeepSeek is configured; see [backend local development](backend/README.md#local-development) and [frontend setup](frontend/README.md#run-and-verify) for configuration details.
+
+The environment examples are committed; local `.env` files, dependencies, build output, and Python caches are ignored. See [seed-data guidance](seed/README.md) before importing campus data.
 
 Before implementation, prepare:
 
